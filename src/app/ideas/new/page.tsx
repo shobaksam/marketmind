@@ -41,17 +41,17 @@ export default function NewIdeaPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
         <div className="animate-pulse text-white">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center gap-4 px-6 py-3">
-          <button onClick={() => router.push('/dashboard')} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white transition-colors">
             ← Back
           </button>
           <span className="text-lg font-bold">New Research</span>
@@ -59,39 +59,39 @@ export default function NewIdeaPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-12">
-        <Card className="border-slate-800 bg-slate-900/50">
+        <Card className="border-neutral-800 bg-neutral-900/50">
           <CardHeader>
             <CardTitle className="text-2xl text-white">What&apos;s your business idea?</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label htmlFor="idea" className="text-slate-300">Describe your idea</label>
+                <label htmlFor="idea" className="text-neutral-300">Describe your idea</label>
                 <Textarea
                   id="idea"
                   placeholder="e.g., I want to start a homemade pudding delivery service, open a CrossFit gym, buy a McDonald's franchise..."
                   value={idea}
                   onChange={(e) => setIdea(e.target.value)}
-                  className="min-h-[120px] bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  className="min-h-[120px] bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="location" className="text-slate-300">Location (optional)</label>
+                <label htmlFor="location" className="text-neutral-300">Location (optional)</label>
                 <Input
                   id="location"
                   placeholder="e.g., Austin, TX or Dubai, UAE"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-500"
+                  className="bg-neutral-800 border-neutral-700 text-white placeholder:text-neutral-500"
                 />
               </div>
 
               <Button
                 type="submit"
                 disabled={loading || !idea.trim()}
-                className="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white text-base"
+                className="w-full h-12 bg-amber-500 hover:bg-amber-600 text-white text-base"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">

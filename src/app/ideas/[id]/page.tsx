@@ -103,7 +103,7 @@ export default function IdeaPage() {
 
   if (loading || !idea) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="min-h-screen flex items-center justify-center bg-neutral-950">
         <div className="animate-pulse text-white">Loading research...</div>
       </div>
     );
@@ -113,16 +113,16 @@ export default function IdeaPage() {
   const totalSections = idea.framework.sections?.length || 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div className="min-h-screen bg-neutral-950 text-white">
+      <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
-            <button onClick={() => router.push('/dashboard')} className="text-slate-400 hover:text-white">← Back</button>
+            <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white">← Back</button>
             <span className="text-lg font-bold">{idea.title}</span>
-            <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300">{idea.category}</Badge>
+            <Badge variant="secondary" className="bg-amber-500/20 text-amber-300">{idea.category}</Badge>
           </div>
           {completedSections < totalSections && (
-            <Button onClick={handleResearchAll} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={handleResearchAll} className="bg-amber-500 hover:bg-amber-600">
               Research All Sections
             </Button>
           )}
@@ -131,17 +131,17 @@ export default function IdeaPage() {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Summary */}
-        <Card className="border-slate-800 bg-slate-900/50 mb-8">
+        <Card className="border-neutral-800 bg-neutral-900/50 mb-8">
           <CardContent className="pt-6">
-            <p className="text-slate-300 leading-relaxed">{idea.summary}</p>
-            <div className="flex gap-4 mt-4 text-sm text-slate-500">
+            <p className="text-neutral-300 leading-relaxed">{idea.summary}</p>
+            <div className="flex gap-4 mt-4 text-sm text-neutral-500">
               {idea.location && <span>📍 {idea.location}</span>}
               <span>📊 {completedSections}/{totalSections} sections researched</span>
             </div>
             {/* Progress bar */}
-            <div className="mt-4 h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div className="mt-4 h-2 bg-neutral-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
                 style={{ width: `${totalSections ? (completedSections / totalSections) * 100 : 0}%` }}
               />
             </div>
@@ -158,7 +158,7 @@ export default function IdeaPage() {
             return (
               <Card
                 key={section.id}
-                className={`border-slate-800 bg-slate-900/50 transition-all ${isExpanded ? 'md:col-span-2' : ''} ${research ? 'border-l-2 border-l-green-500/50' : ''}`}
+                className={`border-neutral-800 bg-neutral-900/50 transition-all ${isExpanded ? 'md:col-span-2' : ''} ${research ? 'border-l-2 border-l-green-500/50' : ''}`}
               >
                 <CardHeader className="cursor-pointer" onClick={() => research && setExpandedSection(isExpanded ? null : section.id)}>
                   <div className="flex items-start justify-between">
@@ -166,7 +166,7 @@ export default function IdeaPage() {
                       <span className="text-2xl">{section.icon}</span>
                       <div>
                         <CardTitle className="text-base text-white">{section.title}</CardTitle>
-                        <p className="text-sm text-slate-400 mt-1">{section.description}</p>
+                        <p className="text-sm text-neutral-400 mt-1">{section.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -175,7 +175,7 @@ export default function IdeaPage() {
                           {research.score}/10
                         </Badge>
                       )}
-                      <Badge variant="outline" className={`text-xs ${section.priority === 'high' ? 'border-red-500/50 text-red-300' : section.priority === 'medium' ? 'border-yellow-500/50 text-yellow-300' : 'border-slate-600 text-slate-400'}`}>
+                      <Badge variant="outline" className={`text-xs ${section.priority === 'high' ? 'border-red-500/50 text-red-300' : section.priority === 'medium' ? 'border-yellow-500/50 text-yellow-300' : 'border-slate-600 text-neutral-400'}`}>
                         {section.priority}
                       </Badge>
                     </div>
@@ -187,10 +187,10 @@ export default function IdeaPage() {
                     <div>
                       <div className="space-y-1 mb-4">
                         {section.questions.map((q, i) => (
-                          <p key={i} className="text-sm text-slate-500">• {q}</p>
+                          <p key={i} className="text-sm text-neutral-500">• {q}</p>
                         ))}
                       </div>
-                      <Button onClick={() => handleResearch(section.id)} size="sm" className="bg-indigo-600 hover:bg-indigo-700">
+                      <Button onClick={() => handleResearch(section.id)} size="sm" className="bg-amber-500 hover:bg-amber-600">
                         Research This Section
                       </Button>
                     </div>
@@ -198,8 +198,8 @@ export default function IdeaPage() {
 
                   {isResearching && (
                     <div className="flex items-center gap-3 py-4">
-                      <span className="animate-spin h-5 w-5 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full" />
-                      <span className="text-sm text-slate-400">AI is researching this section...</span>
+                      <span className="animate-spin h-5 w-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full" />
+                      <span className="text-sm text-neutral-400">AI is researching this section...</span>
                     </div>
                   )}
 
@@ -208,10 +208,10 @@ export default function IdeaPage() {
                       {/* Key Insights */}
                       {research.keyInsights && research.keyInsights.length > 0 && (
                         <div>
-                          <h4 className="text-sm font-semibold text-indigo-300 mb-2">💡 Key Insights</h4>
+                          <h4 className="text-sm font-semibold text-amber-300 mb-2">💡 Key Insights</h4>
                           <div className="space-y-1">
                             {research.keyInsights.map((insight, i) => (
-                              <p key={i} className="text-sm text-slate-300">• {insight}</p>
+                              <p key={i} className="text-sm text-neutral-300">• {insight}</p>
                             ))}
                           </div>
                         </div>
@@ -219,7 +219,7 @@ export default function IdeaPage() {
 
                       {/* Content */}
                       <div className="prose prose-invert prose-sm max-w-none">
-                        <div className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{research.content}</div>
+                        <div className="text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">{research.content}</div>
                       </div>
 
                       {/* Costs */}
@@ -228,8 +228,8 @@ export default function IdeaPage() {
                           <h4 className="text-sm font-semibold text-green-300 mb-2">💰 Estimated Costs</h4>
                           <div className="grid grid-cols-2 gap-2">
                             {research.estimatedCosts.map((cost, i) => (
-                              <div key={i} className="bg-slate-800/50 rounded-lg p-3">
-                                <p className="text-xs text-slate-400">{cost.item}</p>
+                              <div key={i} className="bg-neutral-800/50 rounded-lg p-3">
+                                <p className="text-xs text-neutral-400">{cost.item}</p>
                                 <p className="text-sm font-medium text-white">${cost.low.toLocaleString()} - ${cost.high.toLocaleString()}</p>
                               </div>
                             ))}
@@ -243,7 +243,7 @@ export default function IdeaPage() {
                           <div>
                             <h4 className="text-sm font-semibold text-red-300 mb-2">⚠️ Risks</h4>
                             {research.risks.map((r, i) => (
-                              <p key={i} className="text-sm text-slate-400">• {r}</p>
+                              <p key={i} className="text-sm text-neutral-400">• {r}</p>
                             ))}
                           </div>
                         )}
@@ -251,7 +251,7 @@ export default function IdeaPage() {
                           <div>
                             <h4 className="text-sm font-semibold text-green-300 mb-2">🚀 Opportunities</h4>
                             {research.opportunities.map((o, i) => (
-                              <p key={i} className="text-sm text-slate-400">• {o}</p>
+                              <p key={i} className="text-sm text-neutral-400">• {o}</p>
                             ))}
                           </div>
                         )}
@@ -263,7 +263,7 @@ export default function IdeaPage() {
                           <h4 className="text-sm font-semibold text-purple-300 mb-2">📚 Resources</h4>
                           <div className="space-y-1">
                             {research.resources.map((r, i) => (
-                              <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="block text-sm text-indigo-400 hover:text-indigo-300">
+                              <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="block text-sm text-amber-400 hover:text-amber-300">
                                 {r.type === 'video' ? '🎥' : r.type === 'tool' ? '🔧' : '📄'} {r.title}
                               </a>
                             ))}
@@ -274,7 +274,7 @@ export default function IdeaPage() {
                   )}
 
                   {research && !isExpanded && (
-                    <p className="text-sm text-slate-500 cursor-pointer" onClick={() => setExpandedSection(section.id)}>
+                    <p className="text-sm text-neutral-500 cursor-pointer" onClick={() => setExpandedSection(section.id)}>
                       Click to expand research results →
                     </p>
                   )}
