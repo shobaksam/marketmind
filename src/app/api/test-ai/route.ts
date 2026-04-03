@@ -1,26 +1,33 @@
 import { NextResponse } from 'next/server';
-import { aiGenerate } from '@/lib/ai';
 
 export async function GET() {
-  try {
-    const start = Date.now();
-    // Use a prompt similar to the research route
-    const result = await aiGenerate('You are a business research analyst. Research market size for a coffee shop. Return JSON: {"sectionId":"test","keyTakeaway":"Coffee is popular","score":7,"layout":[{"type":"stat-grid","data":[{"label":"Market","value":"$48B","icon":"📊"}]}]}. Return ONLY valid JSON.', 2000);
-    const elapsed = Date.now() - start;
-    return NextResponse.json({ ok: true, elapsed, result: result.slice(0, 500) });
-  } catch (err) {
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) });
+  const results: Record<string, unknown> = {};
+  
+  const groqKey = process.env.GROQ_API_KEY?.trim();
+  results.groqKeyLength = groqKey?.length || 0;
+  results.groqKeyPrefix = groqKey?.slice(0, 8) || 'none';
+  
+  if (groqKey) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: 'Say hi' }],
+          max_tokens: 5,
+        }),
+      });
+      const body = await res.text();
+      results.groqStatus = res.status;
+      results.groqBody = body.slice(0, 300);
+    } catch (e) {
+      results.groqError = e instanceof Error ? e.message : String(e);
+    }
   }
-}
 
-export async function POST() {
-  // Same test but as POST
-  try {
-    const start = Date.now();
-    const result = await aiGenerate('Return JSON: {"ok": true}', 50);
-    const elapsed = Date.now() - start;
-    return NextResponse.json({ ok: true, elapsed, result: result.slice(0, 200) });
-  } catch (err) {
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : String(err) });
-  }
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  results.geminiKeyLength = geminiKey?.length || 0;
+
+  return NextResponse.json(results);
 }
