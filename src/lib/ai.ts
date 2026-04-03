@@ -1,11 +1,12 @@
 // AI provider abstraction: tries Groq first (faster, more reliable), falls back to Gemini
 
 export async function aiGenerate(prompt: string, maxTokens: number = 2000): Promise<string> {
+  const errors: string[] = [];
   // Try Groq first (faster response, Gemini often rate-limited on free tier)
   const groqKey = process.env.GROQ_API_KEY?.trim();
   if (groqKey) {
     try {
-      console.log('Trying Groq fallback...');
+      console.log('GROQ-FIRST-V2: Trying Groq as primary provider...');
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -24,11 +25,14 @@ export async function aiGenerate(prompt: string, maxTokens: number = 2000): Prom
         return data.choices?.[0]?.message?.content || '';
       }
       const errText = await res.text();
+      errors.push(`Groq ${res.status}: ${errText.slice(0, 150)}`);
       console.warn('Groq failed, status:', res.status, 'body:', errText.slice(0, 200));
     } catch (e) {
+      errors.push(`Groq exception: ${e instanceof Error ? e.message : String(e)}`);
       console.warn('Groq error:', e);
     }
   } else {
+    errors.push('No GROQ_API_KEY');
     console.warn('No GROQ_API_KEY set');
   }
 
@@ -58,7 +62,7 @@ export async function aiGenerate(prompt: string, maxTokens: number = 2000): Prom
     }
   }
 
-  throw new Error('All AI providers failed - check API keys');
+  throw new Error(`All AI providers failed: ${errors.join(' | ')}`);
 }
 
 export function parseJSON<T>(text: string): T {
