@@ -32,7 +32,7 @@ export function FadeInStagger({ children, className = '' }: { children: ReactNod
   );
 }
 
-export function FadeInItem({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function FadeInItem({ children, className = '', id }: { children: ReactNode; className?: string; id?: string }) {
   return (
     <motion.div
       variants={{
@@ -40,6 +40,7 @@ export function FadeInItem({ children, className = '' }: { children: ReactNode; 
         visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
       }}
       className={className}
+      id={id}
     >
       {children}
     </motion.div>

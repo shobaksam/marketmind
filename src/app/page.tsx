@@ -126,6 +126,86 @@ export default function LandingPage() {
         </FadeInStagger>
       </section>
 
+      {/* Before / After */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
+        <FadeIn>
+          <h2 className="text-3xl font-bold text-center mb-4">From vague idea to visual insights</h2>
+          <p className="text-neutral-400 text-center mb-12 max-w-xl mx-auto">See the difference MarketMind makes — no more guessing with walls of text.</p>
+        </FadeIn>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <FadeIn delay={0.1}>
+            <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 relative">
+              <div className="absolute -top-3 left-4 bg-red-500/80 text-white text-xs font-bold px-3 py-1 rounded-full">BEFORE</div>
+              <div className="space-y-2 text-sm text-neutral-500 font-mono mt-2">
+                <p>Market size: approximately $2.4 billion</p>
+                <p>Startup costs range from $15,000-$45,000</p>
+                <p>Main competitors: Company A, Company B</p>
+                <p>Growth rate: 12% annually</p>
+                <p>Break-even estimate: 14-18 months</p>
+                <p className="text-neutral-600">... 3 more pages of text ...</p>
+              </div>
+            </div>
+          </FadeIn>
+          <FadeIn delay={0.2}>
+            <div className="rounded-xl border-2 border-amber-500/30 bg-neutral-900/50 p-6 relative">
+              <div className="absolute -top-3 left-4 bg-amber-500 text-black text-xs font-bold px-3 py-1 rounded-full">AFTER — MARKETMIND</div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="bg-neutral-800/60 rounded-lg p-3 border border-neutral-700/50">
+                  <div className="text-lg">📊</div>
+                  <div className="text-lg font-bold text-white">$2.4B</div>
+                  <div className="text-xs text-neutral-400">Market Size <span className="text-green-400">↑</span></div>
+                </div>
+                <div className="bg-neutral-800/60 rounded-lg p-3 border border-neutral-700/50">
+                  <div className="text-lg">💰</div>
+                  <div className="text-lg font-bold text-white">$30K</div>
+                  <div className="text-xs text-neutral-400">Avg Startup Cost</div>
+                </div>
+                <div className="bg-neutral-800/60 rounded-lg p-3 border border-neutral-700/50">
+                  <div className="text-lg">⏱️</div>
+                  <div className="text-lg font-bold text-white">16 mo</div>
+                  <div className="text-xs text-neutral-400">Break-even</div>
+                </div>
+                <div className="bg-neutral-800/60 rounded-lg p-3 border border-neutral-700/50">
+                  <div className="text-lg">🚀</div>
+                  <div className="text-lg font-bold text-white">12%</div>
+                  <div className="text-xs text-neutral-400">Growth Rate <span className="text-green-400">↑</span></div>
+                </div>
+              </div>
+              <div className="mt-2 bg-green-500/8 border border-green-500/20 rounded-lg p-2 text-xs text-green-300 flex items-center gap-2">
+                🚀 High growth market with low competition in your area
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
+        <FadeIn>
+          <h2 className="text-3xl font-bold text-center mb-12">Trusted by entrepreneurs</h2>
+        </FadeIn>
+        <FadeInStagger className="grid sm:grid-cols-3 gap-6">
+          {[
+            { name: 'Sarah K.', role: 'Food Truck Owner', quote: 'MarketMind showed me exactly what permits I needed and how much to budget. Saved me weeks of research.', avatar: '👩‍🍳' },
+            { name: 'James R.', role: 'SaaS Founder', quote: 'The competitor analysis alone was worth it. Found a gap in the market I would have completely missed.', avatar: '👨‍💻' },
+            { name: 'Maria L.', role: 'Fitness Studio', quote: 'I went from "maybe someday" to a solid business plan in one afternoon. The visual dashboard makes it so clear.', avatar: '💪' },
+          ].map((t, i) => (
+            <FadeInItem key={i}>
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 h-full flex flex-col">
+                <p className="text-neutral-300 text-sm leading-relaxed flex-1">&ldquo;{t.quote}&rdquo;</p>
+                <div className="flex items-center gap-3 mt-4 pt-4 border-t border-neutral-800">
+                  <span className="text-2xl">{t.avatar}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{t.name}</p>
+                    <p className="text-xs text-neutral-500">{t.role}</p>
+                  </div>
+                </div>
+              </div>
+            </FadeInItem>
+          ))}
+        </FadeInStagger>
+      </section>
+
       {/* Examples */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-20">
         <FadeIn>

@@ -15,15 +15,25 @@ export async function POST(req: NextRequest) {
   }
 
   // Generate research framework via AI
+  const locationEmphasis = location ? `
+CRITICAL — LOCAL FOCUS: The user specified "${location}" as their target area. Every section MUST be hyper-local:
+- Questions must ask about "${location}" specifically (local competitors, local regulations, local demographics, local pricing)
+- Include a dedicated "Local Market" section about the ${location} area specifically
+- Reference local zoning laws, permits, and business regulations for ${location}
+- Consider local culture, demographics, income levels, and consumer behavior in ${location}
+- Mention nearby competitors and local market saturation in ${location}
+- Do NOT give generic national/global advice — everything should be actionable for someone in ${location}` : '';
+
   const prompt = `You are a business research analyst. Given a business idea, generate a structured research framework with sections that are specifically relevant to THIS type of business.
 
 Business Idea: "${idea}"
 ${location ? `Location: ${location}` : ''}
+${locationEmphasis}
 
 Return a JSON object with this exact structure:
 {
   "title": "Short catchy title for this research",
-  "summary": "One paragraph summary of the idea",
+  "summary": "One paragraph summary of the idea${location ? ` in ${location}` : ''}",
   "category": "Category like Food & Beverage, Technology, Retail, Service, etc.",
   "sections": [
     {
@@ -37,7 +47,7 @@ Return a JSON object with this exact structure:
   ]
 }
 
-Generate 6-8 sections that are SPECIFICALLY relevant to this business idea. Not generic — think about what someone actually needs to know for THIS particular business. Include sections like market size, competition, regulations, startup costs, target customers, etc. but make questions specific.
+Generate 6-8 sections that are SPECIFICALLY relevant to this business idea. Not generic — think about what someone actually needs to know for THIS particular business. Include sections like market size, competition, regulations, startup costs, target customers, etc. but make questions specific.${location ? ` Frame ALL questions around the ${location} area.` : ''}
 
 Return ONLY valid JSON, no markdown.`;
 

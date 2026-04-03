@@ -81,10 +81,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Section not found' }, { status: 404 });
   }
 
+  const locationDirective = idea.location ? `
+CRITICAL — LOCAL FOCUS: The user is researching this idea for "${idea.location}" specifically.
+- ALL data, stats, competitors, costs, and insights MUST be specific to the ${idea.location} area
+- Name REAL local competitors in ${idea.location}, not national chains (unless they operate there)
+- Use local cost-of-living, rent prices, wages, and market data for ${idea.location}
+- Reference local regulations, permits, zoning laws specific to ${idea.location}
+- Consider ${idea.location}'s demographics, culture, income levels, and consumer preferences
+- Do NOT give generic advice — be hyper-specific to ${idea.location}` : '';
+
   const prompt = `You are a business research analyst creating VISUAL DASHBOARD DATA. Your output will be rendered as charts, stat cards, and visual components — NOT walls of text.
 
 Business Idea: "${idea.idea_text}"
 ${idea.location ? `Location: ${idea.location}` : ''}
+${locationDirective}
 
 Research Section: "${section.title}"
 Questions to answer:
@@ -130,7 +140,7 @@ RULES:
 - resources: Real URLs to articles, YouTube videos, or tools.
 - score: 1-10 how favorable this aspect is.
 - Use simple language a grandmother would understand. No jargon.
-- Be specific with real data, real names, real numbers.
+- Be specific with real data, real names, real numbers.${idea.location ? `\n- ALL data must be specific to ${idea.location}. Name real local businesses, use local pricing, reference local laws.` : ''}
 
 Return ONLY valid JSON.`;
 

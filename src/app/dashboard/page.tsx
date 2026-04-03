@@ -8,7 +8,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { IdeaCardSkeleton } from '@/components/ui/skeleton';
 import { FadeIn, FadeInStagger, FadeInItem } from '@/components/animate';
-import { Lightbulb, Plus, LogOut, Clock, MapPin, ChevronRight, ArrowLeftRight } from 'lucide-react';
+import { Lightbulb, Plus, LogOut, Clock, MapPin, ChevronRight, ArrowLeftRight, Trash2, X, CheckCircle2, Circle } from 'lucide-react';
+
+interface Research {
+  score?: number;
+  stats?: { label: string; value: string; icon: string; trend?: string }[];
+  keyTakeaway?: string;
+}
 
 interface Idea {
   id: string;
@@ -18,9 +24,52 @@ interface Idea {
   idea_text: string;
   location: string;
   status: string;
-  framework: { sections: Array<{ id: string }> };
-  research: Record<string, unknown>;
+  framework: { sections: Array<{ id: string; title: string; icon: string }> };
+  research: Record<string, Research>;
   created_at: string;
+}
+
+function OnboardingBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <FadeIn>
+      <div className="mb-8 rounded-xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-6 relative">
+        <button onClick={onDismiss} className="absolute top-3 right-3 text-neutral-500 hover:text-white"><X className="h-4 w-4" /></button>
+        <h3 className="text-lg font-bold text-amber-400 mb-2">👋 Welcome to MarketMind!</h3>
+        <p className="text-sm text-neutral-300 mb-4">Here&apos;s how to get the most out of your research:</p>
+        <div className="grid sm:grid-cols-3 gap-4">
+          {[
+            { step: '1', title: 'Describe your idea', desc: 'Click "New Idea" and tell us about your business concept.', icon: '💡' },
+            { step: '2', title: 'AI builds your framework', desc: 'We generate research sections tailored to YOUR specific idea.', icon: '🔬' },
+            { step: '3', title: 'Deep dive each section', desc: 'Research sections individually or all at once for visual insights.', icon: '📊' },
+          ].map((s) => (
+            <div key={s.step} className="flex gap-3">
+              <span className="text-2xl shrink-0">{s.icon}</span>
+              <div>
+                <p className="text-sm font-semibold text-white">{s.title}</p>
+                <p className="text-xs text-neutral-400">{s.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </FadeIn>
+  );
+}
+
+function MiniStats({ research }: { research: Record<string, Research> }) {
+  const allStats = Object.values(research || {}).flatMap(r => r.stats || []).slice(0, 3);
+  if (!allStats.length) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mt-3">
+      {allStats.map((s, i) => (
+        <span key={i} className="inline-flex items-center gap-1 bg-neutral-800/80 rounded-md px-2 py-1 text-xs">
+          <span>{s.icon}</span>
+          <span className="font-semibold text-white">{s.value}</span>
+          <span className="text-neutral-500">{s.label}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -29,6 +78,9 @@ export default function DashboardPage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const fetchIdeas = useCallback(async () => {
     setError(null);
@@ -37,6 +89,10 @@ export default function DashboardPage() {
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setIdeas(data);
+      // Show onboarding if first time (no ideas and never dismissed)
+      if (data.length === 0 && !localStorage.getItem('mm-onboarding-dismissed')) {
+        setShowOnboarding(true);
+      }
     } catch {
       setError('Failed to load your ideas. Please try again.');
     } finally {
@@ -48,6 +104,21 @@ export default function DashboardPage() {
     if (status === 'unauthenticated') router.push('/login');
     if (status === 'authenticated') fetchIdeas();
   }, [status, router, fetchIdeas]);
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/ideas/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setIdeas(prev => prev.filter(i => i.id !== id));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  };
 
   if (status === 'loading') {
     return (
@@ -77,8 +148,11 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      {/* Dashboard Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {showOnboarding && (
+          <OnboardingBanner onDismiss={() => { setShowOnboarding(false); localStorage.setItem('mm-onboarding-dismissed', '1'); }} />
+        )}
+
         <FadeIn>
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -118,7 +192,7 @@ export default function DashboardPage() {
               <IdeaCardSkeleton key={i} />
             ))}
           </div>
-        ) : ideas.length === 0 ? (
+        ) : ideas.length === 0 && !showOnboarding ? (
           <FadeIn delay={0.1}>
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/30 p-12 sm:p-16 text-center">
               <Lightbulb className="h-12 w-12 text-amber-400/50 mx-auto mb-4" />
@@ -144,7 +218,7 @@ export default function DashboardPage() {
               return (
                 <FadeInItem key={idea.id}>
                   <Card
-                    className="border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 transition-all cursor-pointer group"
+                    className="border-neutral-800 bg-neutral-900/50 hover:border-neutral-700 transition-all cursor-pointer group relative"
                     onClick={() => router.push(`/ideas/${idea.id}`)}
                   >
                     <CardContent className="p-4 sm:p-6">
@@ -157,9 +231,16 @@ export default function DashboardPage() {
                                 {idea.category}
                               </Badge>
                             )}
+                            {progress === 100 && (
+                              <Badge className="bg-green-500/10 text-green-400 border-green-500/20">✓ Complete</Badge>
+                            )}
                           </div>
                           <p className="text-sm text-neutral-400 line-clamp-2 mb-3">{idea.summary || idea.idea_text}</p>
-                          <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+
+                          {/* Mini stat previews */}
+                          <MiniStats research={idea.research} />
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 mt-3">
                             {idea.location && (
                               <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" /> {idea.location}
@@ -168,8 +249,21 @@ export default function DashboardPage() {
                             <span className="flex items-center gap-1">
                               <Clock className="h-3 w-3" /> {new Date(idea.created_at).toLocaleDateString()}
                             </span>
-                            <span>{completedSections}/{totalSections} sections</span>
                           </div>
+
+                          {/* Section progress with checkmarks */}
+                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                            {idea.framework?.sections?.map((s) => {
+                              const done = !!(idea.research && idea.research[s.id]);
+                              return (
+                                <span key={s.id} className={`inline-flex items-center gap-1 text-xs ${done ? 'text-green-400' : 'text-neutral-600'}`} title={s.title}>
+                                  {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+                                  <span className="hidden lg:inline">{s.title}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+
                           <div className="mt-3 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
                             <div
                               className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all"
@@ -177,7 +271,39 @@ export default function DashboardPage() {
                             />
                           </div>
                         </div>
-                        <ChevronRight className="h-5 w-5 text-neutral-600 group-hover:text-neutral-400 transition-colors ml-4 shrink-0 mt-1" />
+                        <div className="flex items-center gap-2 ml-4 shrink-0">
+                          {/* Delete button */}
+                          {confirmDeleteId === idea.id ? (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-500/50 text-red-400 hover:bg-red-500/10 text-xs px-2 h-7"
+                                onClick={() => handleDelete(idea.id)}
+                                disabled={deletingId === idea.id}
+                              >
+                                {deletingId === idea.id ? '...' : 'Delete'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-neutral-500 text-xs px-2 h-7"
+                                onClick={() => setConfirmDeleteId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              className="text-neutral-700 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                              onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(idea.id); }}
+                              title="Delete idea"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                          <ChevronRight className="h-5 w-5 text-neutral-600 group-hover:text-neutral-400 transition-colors mt-1" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>

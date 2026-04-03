@@ -21,3 +21,23 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   return NextResponse.json(data);
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const supabase = getServiceSupabase();
+  const { error } = await supabase
+    .from('marketmind_ideas')
+    .delete()
+    .eq('id', params.id)
+    .eq('user_email', session.user.email);
+
+  if (error) {
+    return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}

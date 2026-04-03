@@ -30,7 +30,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   const prompt = `Based on this business idea and research, generate a comprehensive SWOT analysis.
 
 Business Idea: "${idea.idea_text}"
-${idea.location ? `Location: ${idea.location}` : ''}
+${idea.location ? `Location: ${idea.location}
+
+CRITICAL — LOCAL FOCUS: All SWOT items must be specific to ${idea.location}. Reference local market conditions, local competitors, local regulations, and local opportunities. Do NOT give generic national advice.` : ''}
 
 Research Summary:
 ${researchSummary.substring(0, 3000)}

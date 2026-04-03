@@ -11,6 +11,58 @@ import { FadeIn, FadeInStagger, FadeInItem } from '@/components/animate';
 import jsPDF from 'jspdf';
 import { ResearchDashboard } from '@/components/research-dashboard';
 
+const LOADING_MESSAGES = [
+  '🔍 Analyzing market data...',
+  '📊 Crunching the numbers...',
+  '🏢 Scouting competitors...',
+  '💡 Finding opportunities...',
+  '📋 Preparing your report...',
+];
+
+function ResearchLoader() {
+  const [msgIndex, setMsgIndex] = useState(0);
+  const [fade, setFade] = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const msgInterval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setMsgIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+        setFade(true);
+      }, 300);
+    }, 3000);
+    const progInterval = setInterval(() => {
+      setProgress((prev) => Math.min(prev + Math.random() * 8 + 2, 92));
+    }, 500);
+    return () => { clearInterval(msgInterval); clearInterval(progInterval); };
+  }, []);
+
+  return (
+    <div className="py-6 space-y-4">
+      <div className="flex items-center gap-3">
+        <span className="animate-spin h-5 w-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full" />
+        <span
+          className={`text-sm text-amber-300 font-medium transition-opacity duration-300 ${fade ? 'opacity-100' : 'opacity-0'}`}
+        >
+          {LOADING_MESSAGES[msgIndex]}
+        </span>
+      </div>
+      <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-16 bg-neutral-800/40 rounded-lg animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface Section {
   id: string;
   title: string;
@@ -71,6 +123,8 @@ export default function IdeaPage() {
   const [generatingSwot, setGeneratingSwot] = useState(false);
   const [copied, setCopied] = useState(false);
   const [sectionError, setSectionError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [journeyMode, setJourneyMode] = useState(true); // V8: auto-expand journey flow
 
   const fetchIdea = useCallback(async () => {
     setError(null);
@@ -107,6 +161,10 @@ export default function IdeaPage() {
         return { ...prev, research: { ...prev.research, [sectionId]: research } };
       });
       setExpandedSection(sectionId);
+      // V8 Journey: auto-scroll to this section
+      setTimeout(() => {
+        document.getElementById(`section-${sectionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     } catch {
       setSectionError(sectionId);
     } finally {
@@ -190,14 +248,33 @@ export default function IdeaPage() {
       if (y > 250) { doc.addPage(); doc.setFillColor(10, 10, 10); doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F'); y = 20; }
       addText(`${section.icon} ${section.title}`, 14, true, [245, 158, 11]);
       if (research) {
-        if (research.keyInsights?.length) {
-          addText('Key Insights:', 10, true, [200, 200, 200]);
-          research.keyInsights.forEach(i => addText(`• ${i}`, 9, false, [180, 180, 180]));
-        }
-        if (research.content) {
-          addText(research.content.substring(0, 800), 9, false, [170, 170, 170]);
+        if (research.keyTakeaway) {
+          addText(research.keyTakeaway, 10, true, [200, 200, 200]);
         }
         if (research.score) addText(`Score: ${research.score}/10`, 10, true, [34, 197, 94]);
+        if (research.stats?.length) {
+          addText('Key Stats:', 10, true, [200, 200, 200]);
+          research.stats.forEach((s: { icon: string; label: string; value: string }) => addText(`${s.icon} ${s.label}: ${s.value}`, 9, false, [180, 180, 180]));
+        }
+        if (research.insights?.length) {
+          addText('Insights:', 10, true, [200, 200, 200]);
+          research.insights.forEach((i: { text: string }) => addText(`• ${i.text}`, 9, false, [180, 180, 180]));
+        }
+        if (research.keyInsights?.length) {
+          research.keyInsights.forEach(i => addText(`• ${i}`, 9, false, [180, 180, 180]));
+        }
+        if (research.costBreakdown?.length || research.estimatedCosts?.length) {
+          const costs = research.costBreakdown || research.estimatedCosts || [];
+          addText('Cost Estimates:', 10, true, [200, 200, 200]);
+          costs.forEach((c: { item: string; low: number; high: number }) => addText(`• ${c.item}: $${c.low.toLocaleString()} - $${c.high.toLocaleString()}`, 9, false, [180, 180, 180]));
+        }
+        if (research.competitors?.length) {
+          addText('Competitors:', 10, true, [200, 200, 200]);
+          research.competitors.forEach((c: { name: string; price: string; rating: number }) => addText(`• ${c.name} — ${c.price} (${c.rating}★)`, 9, false, [180, 180, 180]));
+        }
+        if (research.content && !research.stats?.length) {
+          addText(research.content.substring(0, 800), 9, false, [170, 170, 170]);
+        }
       } else {
         addText('Not yet researched', 9, false, [100, 100, 100]);
       }
@@ -262,35 +339,87 @@ export default function IdeaPage() {
 
   const completedSections = Object.keys(idea.research || {}).length;
   const totalSections = idea.framework.sections?.length || 0;
+  const progressPct = totalSections ? Math.round((completedSections / totalSections) * 100) : 0;
+
+  // V8 Journey: find first unresearched section
+  const firstUnresearchedIdx = idea.framework.sections?.findIndex(s => !idea.research?.[s.id]) ?? -1;
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
       <header className="border-b border-neutral-800 bg-neutral-950/80 backdrop-blur sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 sm:px-6 py-3 gap-2">
-          <div className="flex items-center gap-3 min-w-0">
-            <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white transition-colors shrink-0">←</button>
-            <span className="text-lg font-bold truncate">{idea.title}</span>
-            <Badge variant="secondary" className="bg-amber-500/10 text-amber-400 border-amber-500/20 shrink-0 hidden sm:inline-flex">{idea.category}</Badge>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0">
+              <button onClick={() => router.push('/dashboard')} className="text-neutral-400 hover:text-white transition-colors shrink-0 text-lg">←</button>
+              <span className="text-lg font-bold truncate">{idea.title}</span>
+              <Badge variant="secondary" className="bg-amber-500/10 text-amber-400 border-amber-500/20 shrink-0 hidden sm:inline-flex">{idea.category}</Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {completedSections < totalSections && (
+                <Button onClick={handleResearchAll} disabled={researchingAll} className="bg-amber-500 hover:bg-amber-600 text-black font-semibold text-base px-5 py-2" size="lg">
+                  {researchingAll ? '⏳ Researching...' : '🔬 Research All Sections'}
+                </Button>
+              )}
+              {completedSections > 0 && !idea.swot && (
+                <Button onClick={handleGenerateSwot} disabled={generatingSwot} variant="outline" size="lg" className="border-neutral-700 text-base px-5">
+                  {generatingSwot ? '⏳ Generating...' : '📊 Get SWOT Analysis'}
+                </Button>
+              )}
+              <Button onClick={handleShare} variant="outline" size="lg" className="border-neutral-700 text-base px-5">
+                {copied ? '✓ Link Copied!' : '🔗 Share'}
+              </Button>
+              {completedSections > 0 && (
+                <Button onClick={handleExportPDF} variant="outline" size="lg" className="border-neutral-700 text-base px-5">
+                  📄 Download PDF
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {completedSections < totalSections && (
-              <Button onClick={handleResearchAll} disabled={researchingAll} className="bg-amber-500 hover:bg-amber-600 text-black font-semibold" size="sm">
-                {researchingAll ? '⏳ Researching...' : '🔬 Research All'}
-              </Button>
+
+          {/* V8: Progress Stepper */}
+          <div className="mt-3 flex items-center gap-1 overflow-x-auto pb-1">
+            {idea.framework.sections?.map((section, idx) => {
+              const done = !!(idea.research && idea.research[section.id]);
+              const isCurrent = idx === firstUnresearchedIdx;
+              const isActive = researchingSection === section.id;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => {
+                    document.getElementById(`section-${section.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (done) setExpandedSection(expandedSection === section.id ? null : section.id);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                    done ? 'bg-green-500/15 text-green-400 border border-green-500/30' :
+                    isActive ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 animate-pulse' :
+                    isCurrent ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' :
+                    'bg-neutral-800/50 text-neutral-500 border border-neutral-700/50'
+                  }`}
+                  title={section.title}
+                >
+                  <span>{section.icon}</span>
+                  <span className="hidden lg:inline">{section.title}</span>
+                  {done && <span>✓</span>}
+                  {isActive && <span className="animate-spin h-3 w-3 border border-amber-500/30 border-t-amber-500 rounded-full" />}
+                </button>
+              );
+            })}
+            {idea.swot && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/30">
+                📊 SWOT ✓
+              </span>
             )}
-            {completedSections > 0 && !idea.swot && (
-              <Button onClick={handleGenerateSwot} disabled={generatingSwot} variant="outline" size="sm" className="border-neutral-700">
-                {generatingSwot ? '⏳ Generating...' : '📊 SWOT'}
-              </Button>
-            )}
-            <Button onClick={handleShare} variant="outline" size="sm" className="border-neutral-700">
-              {copied ? '✓ Copied!' : '🔗 Share'}
-            </Button>
-            {completedSections > 0 && (
-              <Button onClick={handleExportPDF} variant="outline" size="sm" className="border-neutral-700">
-                📄 PDF
-              </Button>
-            )}
+          </div>
+
+          {/* Progress bar */}
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-xs text-neutral-400 shrink-0">{completedSections}/{totalSections} done</span>
           </div>
         </div>
       </header>
@@ -300,61 +429,94 @@ export default function IdeaPage() {
         <FadeIn>
           <Card className="border-neutral-800 bg-neutral-900/50 mb-8">
             <CardContent className="pt-6">
-              <p className="text-neutral-300 leading-relaxed">{idea.summary}</p>
+              <p className="text-neutral-300 leading-relaxed text-base">{idea.summary}</p>
               <div className="flex flex-wrap gap-4 mt-4 text-sm text-neutral-500">
-                {idea.location && <span>📍 {idea.location}</span>}
-                <span>📊 {completedSections}/{totalSections} sections researched</span>
-              </div>
-              <div className="mt-4 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all duration-500"
-                  style={{ width: `${totalSections ? (completedSections / totalSections) * 100 : 0}%` }}
-                />
+                {idea.location && <span className="flex items-center gap-1">📍 {idea.location}</span>}
+                <span>📊 {progressPct}% complete</span>
               </div>
             </CardContent>
           </Card>
         </FadeIn>
 
-        {/* SWOT Analysis */}
+        {/* SWOT Analysis - 2x2 Grid */}
         {idea.swot && (
           <FadeIn delay={0.1}>
             <div className="mb-8">
               <h2 className="text-xl font-bold mb-4">📊 SWOT Analysis</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <Card className="border-green-500/20 bg-green-500/5">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-green-400">💪 Strengths</CardTitle></CardHeader>
-                  <CardContent className="pt-0">
-                    {idea.swot.strengths.map((s, i) => <p key={i} className="text-sm text-neutral-300 mb-1">• {s}</p>)}
-                  </CardContent>
-                </Card>
-                <Card className="border-red-500/20 bg-red-500/5">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-red-400">⚠️ Weaknesses</CardTitle></CardHeader>
-                  <CardContent className="pt-0">
-                    {idea.swot.weaknesses.map((w, i) => <p key={i} className="text-sm text-neutral-300 mb-1">• {w}</p>)}
-                  </CardContent>
-                </Card>
-                <Card className="border-blue-500/20 bg-blue-500/5">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-blue-400">🚀 Opportunities</CardTitle></CardHeader>
-                  <CardContent className="pt-0">
-                    {idea.swot.opportunities.map((o, i) => <p key={i} className="text-sm text-neutral-300 mb-1">• {o}</p>)}
-                  </CardContent>
-                </Card>
-                <Card className="border-yellow-500/20 bg-yellow-500/5">
-                  <CardHeader className="pb-2"><CardTitle className="text-sm text-yellow-400">🔥 Threats</CardTitle></CardHeader>
-                  <CardContent className="pt-0">
-                    {idea.swot.threats.map((t, i) => <p key={i} className="text-sm text-neutral-300 mb-1">• {t}</p>)}
-                  </CardContent>
-                </Card>
-              </div>
-              <Card className="border-neutral-800 bg-neutral-900/50">
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-4 mb-3">
-                    <span className="text-3xl font-bold text-amber-400">{idea.swot.overallScore}/10</span>
-                    <span className="text-neutral-400">Viability Score</span>
+              <div className="rounded-xl border border-neutral-800 overflow-hidden mb-4">
+                {/* Header row labels */}
+                <div className="grid grid-cols-2">
+                  <div className="text-center text-xs font-semibold text-neutral-500 py-2 border-b border-neutral-800 bg-neutral-900/30">INTERNAL</div>
+                  <div className="text-center text-xs font-semibold text-neutral-500 py-2 border-b border-neutral-800 bg-neutral-900/30">EXTERNAL</div>
+                </div>
+                <div className="grid grid-cols-2">
+                  {/* Strengths - top left */}
+                  <div className="p-5 bg-green-500/5 border-r border-b border-neutral-800 relative">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 to-green-400" />
+                    <h4 className="text-sm font-bold text-green-400 mb-3 flex items-center gap-2">💪 Strengths</h4>
+                    <ul className="space-y-2">
+                      {idea.swot.strengths.map((s, i) => (
+                        <li key={i} className="text-sm text-neutral-300 flex items-start gap-2">
+                          <span className="text-green-500 mt-0.5 shrink-0">✓</span>{s}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
+                  {/* Opportunities - top right */}
+                  <div className="p-5 bg-blue-500/5 border-b border-neutral-800 relative">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-blue-400" />
+                    <h4 className="text-sm font-bold text-blue-400 mb-3 flex items-center gap-2">🚀 Opportunities</h4>
+                    <ul className="space-y-2">
+                      {idea.swot.opportunities.map((o, i) => (
+                        <li key={i} className="text-sm text-neutral-300 flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5 shrink-0">→</span>{o}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {/* Weaknesses - bottom left */}
+                  <div className="p-5 bg-red-500/5 border-r border-neutral-800 relative">
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 to-red-400" />
+                    <h4 className="text-sm font-bold text-red-400 mb-3 flex items-center gap-2">⚠️ Weaknesses</h4>
+                    <ul className="space-y-2">
+                      {idea.swot.weaknesses.map((w, i) => (
+                        <li key={i} className="text-sm text-neutral-300 flex items-start gap-2">
+                          <span className="text-red-500 mt-0.5 shrink-0">✗</span>{w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {/* Threats - bottom right */}
+                  <div className="p-5 bg-yellow-500/5 relative">
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500 to-yellow-400" />
+                    <h4 className="text-sm font-bold text-yellow-400 mb-3 flex items-center gap-2">🔥 Threats</h4>
+                    <ul className="space-y-2">
+                      {idea.swot.threats.map((t, i) => (
+                        <li key={i} className="text-sm text-neutral-300 flex items-start gap-2">
+                          <span className="text-yellow-500 mt-0.5 shrink-0">!</span>{t}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              {/* Viability Score */}
+              <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-6 flex items-center gap-6">
+                <div className="relative">
+                  <div className={`w-20 h-20 rounded-full border-4 flex items-center justify-center ${
+                    idea.swot.overallScore >= 7 ? 'border-green-500 bg-green-500/10' :
+                    idea.swot.overallScore >= 4 ? 'border-amber-500 bg-amber-500/10' :
+                    'border-red-500 bg-red-500/10'
+                  }`}>
+                    <span className="text-2xl font-bold text-white">{idea.swot.overallScore}</span>
+                    <span className="text-sm text-neutral-400">/10</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-1">Viability Score</h4>
                   <p className="text-neutral-300 text-sm leading-relaxed">{idea.swot.verdict}</p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </FadeIn>
         )}
@@ -368,82 +530,136 @@ export default function IdeaPage() {
           </div>
         )}
 
-        {/* Research sections grid */}
-        <h2 className="text-xl font-bold mb-4">🔬 Research Sections</h2>
-        <FadeInStagger className="grid md:grid-cols-2 gap-4">
-          {idea.framework.sections?.map((section) => {
+        {/* V8: Journey flow toggle */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold">🔬 Research Sections</h2>
+          <button
+            onClick={() => setJourneyMode(!journeyMode)}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${journeyMode ? 'border-amber-500/30 text-amber-400 bg-amber-500/10' : 'border-neutral-700 text-neutral-400'}`}
+          >
+            {journeyMode ? '📖 Guided Mode' : '📋 Grid Mode'}
+          </button>
+        </div>
+
+        {/* Research sections — journey or grid */}
+        <FadeInStagger className={journeyMode ? 'space-y-4' : 'grid md:grid-cols-2 gap-4'}>
+          {idea.framework.sections?.map((section, idx) => {
             const research = idea.research?.[section.id];
-            const isExpanded = expandedSection === section.id;
+            // V8 Journey: auto-expand current/completed, collapse future
+            const isJourneyCurrent = journeyMode && idx === firstUnresearchedIdx;
+            const isJourneyFuture = journeyMode && !research && idx > firstUnresearchedIdx && firstUnresearchedIdx !== -1;
+            const isExpanded = expandedSection === section.id || (journeyMode && research && expandedSection !== `close-${section.id}`);
             const isResearching = researchingSection === section.id;
             const hasError = sectionError === section.id;
 
             return (
               <FadeInItem
                 key={section.id}
-                className={isExpanded ? 'md:col-span-2' : ''}
+                id={`section-${section.id}`}
+                className={`scroll-mt-40 ${isExpanded && !journeyMode ? 'md:col-span-2' : ''} ${isJourneyFuture ? 'opacity-40' : ''}`}
               >
                 <Card
-                  className={`border-neutral-800 bg-neutral-900/50 transition-all ${research ? 'border-l-2 border-l-green-500/50' : ''}`}
+                  className={`border-neutral-800 bg-neutral-900/50 transition-all ${
+                    research ? 'border-l-4 border-l-green-500/50' :
+                    isJourneyCurrent ? 'border-l-4 border-l-amber-500/50 ring-1 ring-amber-500/20' : ''
+                  }`}
                 >
-                  <CardHeader className="cursor-pointer" onClick={() => research && setExpandedSection(isExpanded ? null : section.id)}>
+                  <CardHeader
+                    className="cursor-pointer"
+                    onClick={() => {
+                      if (research) {
+                        if (journeyMode) {
+                          setExpandedSection(isExpanded ? `close-${section.id}` : section.id);
+                        } else {
+                          setExpandedSection(isExpanded ? null : section.id);
+                        }
+                      }
+                    }}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-2xl shrink-0">{section.icon}</span>
+                        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-neutral-800/80 text-2xl shrink-0">
+                          {section.icon}
+                        </div>
                         <div className="min-w-0">
-                          <CardTitle className="text-base text-white truncate">{section.title}</CardTitle>
-                          <p className="text-sm text-neutral-400 mt-1 line-clamp-2">{section.description}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-neutral-500 font-mono">Step {idx + 1}</span>
+                            {research && <span className="text-xs text-green-400">✓ Done</span>}
+                          </div>
+                          <CardTitle className="text-base text-white">{section.title}</CardTitle>
+                          <p className="text-sm text-neutral-400 mt-1">{section.description}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {research?.score && (
-                          <Badge className={`${research.score >= 7 ? 'bg-green-500/20 text-green-300' : research.score >= 4 ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'}`}>
+                          <Badge className={`text-sm px-3 py-1 ${research.score >= 7 ? 'bg-green-500/20 text-green-300' : research.score >= 4 ? 'bg-yellow-500/20 text-yellow-300' : 'bg-red-500/20 text-red-300'}`}>
                             {research.score}/10
                           </Badge>
                         )}
-                        <Badge variant="outline" className={`text-xs hidden sm:inline-flex ${section.priority === 'high' ? 'border-red-500/50 text-red-300' : section.priority === 'medium' ? 'border-yellow-500/50 text-yellow-300' : 'border-neutral-600 text-neutral-400'}`}>
-                          {section.priority}
-                        </Badge>
+                        {isExpanded && research ? <span className="text-neutral-500">▼</span> : research ? <span className="text-neutral-600">▶</span> : null}
                       </div>
                     </div>
                   </CardHeader>
 
                   <CardContent>
                     {hasError && (
-                      <div className="mb-4 p-3 rounded-lg border border-red-500/20 bg-red-500/5 flex items-center justify-between">
-                        <span className="text-sm text-red-300">AI research failed for this section.</span>
-                        <Button onClick={() => { setSectionError(null); handleResearch(section.id); }} size="sm" variant="outline" className="border-red-500/30 text-red-300 hover:bg-red-500/10">
-                          🔄 Retry
+                      <div className="mb-4 p-4 rounded-lg border border-red-500/20 bg-red-500/5 flex items-center justify-between">
+                        <span className="text-sm text-red-300">Something went wrong. Want to try again?</span>
+                        <Button onClick={() => { setSectionError(null); handleResearch(section.id); }} size="lg" variant="outline" className="border-red-500/30 text-red-300 hover:bg-red-500/10 text-base px-5">
+                          🔄 Try Again
                         </Button>
                       </div>
                     )}
 
-                    {!research && !isResearching && !hasError && (
+                    {!research && !isResearching && !hasError && !isJourneyFuture && (
                       <div>
-                        <div className="space-y-1 mb-4">
+                        <div className="space-y-2 mb-5">
                           {section.questions.map((q, i) => (
-                            <p key={i} className="text-sm text-neutral-500">• {q}</p>
+                            <p key={i} className="text-sm text-neutral-400 flex items-start gap-2">
+                              <span className="text-amber-500 shrink-0">?</span> {q}
+                            </p>
                           ))}
                         </div>
-                        <Button onClick={() => handleResearch(section.id)} size="sm" className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">
-                          Research This Section
+                        <Button
+                          onClick={() => handleResearch(section.id)}
+                          size="lg"
+                          className="bg-amber-500 hover:bg-amber-600 text-black font-semibold text-base px-6 py-3"
+                        >
+                          🔍 Research This Section
                         </Button>
                       </div>
+                    )}
+
+                    {isJourneyFuture && !research && !isResearching && (
+                      <p className="text-sm text-neutral-600 italic">Complete the sections above first to unlock this one.</p>
                     )}
 
                     {isResearching && (
-                      <div className="flex items-center gap-3 py-4">
-                        <span className="animate-spin h-5 w-5 border-2 border-amber-500/30 border-t-amber-500 rounded-full" />
-                        <span className="text-sm text-neutral-400">AI is researching this section...</span>
-                      </div>
+                      <ResearchLoader />
                     )}
 
                     {research && isExpanded && (
-                      <ResearchDashboard research={research} />
+                      <FadeIn>
+                        <ResearchDashboard research={research} />
+                        {/* V8 Journey: next section CTA */}
+                        {journeyMode && idx < (idea.framework.sections?.length || 0) - 1 && !idea.research?.[idea.framework.sections[idx + 1]?.id] && (
+                          <div className="mt-6 pt-4 border-t border-neutral-800 flex justify-center">
+                            <Button
+                              onClick={() => handleResearch(idea.framework.sections[idx + 1].id)}
+                              size="lg"
+                              className="bg-amber-500 hover:bg-amber-600 text-black font-semibold text-base px-8 py-3"
+                              disabled={researchingSection !== null}
+                            >
+                              Continue → {idea.framework.sections[idx + 1].icon} {idea.framework.sections[idx + 1].title}
+                            </Button>
+                          </div>
+                        )}
+                      </FadeIn>
                     )}
 
                     {research && !isExpanded && (
                       <p className="text-sm text-neutral-500 cursor-pointer hover:text-neutral-400" onClick={() => setExpandedSection(section.id)}>
-                        Click to expand research results →
+                        Click to see research results →
                       </p>
                     )}
                   </CardContent>
