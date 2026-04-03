@@ -5,7 +5,7 @@ export async function GET(_req: NextRequest, { params }: { params: { shareId: st
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from('marketmind_ideas')
-    .select('title, summary, category, location, framework, research, analysis, created_at')
+    .select('title, summary, category, location, framework, research, analysis, swot, created_at')
     .eq('share_id', params.shareId)
     .single();
 
