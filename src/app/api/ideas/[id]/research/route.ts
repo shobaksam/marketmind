@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const supabase = getServiceSupabase();
   const { data: idea, error } = await supabase
-    .from('ideas')
+    .from('marketmind_ideas')
     .select('*')
     .eq('id', params.id)
     .single();
@@ -78,7 +78,7 @@ Return ONLY valid JSON.`;
     const updatedResearch = { ...existingResearch, [sectionId]: research };
 
     await supabase
-      .from('ideas')
+      .from('marketmind_ideas')
       .update({ research: updatedResearch, status: 'researching' })
       .eq('id', params.id);
 

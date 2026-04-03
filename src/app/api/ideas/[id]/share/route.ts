@@ -11,7 +11,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   const supabase = getServiceSupabase();
   const { data: idea } = await supabase
-    .from('ideas')
+    .from('marketmind_ideas')
     .select('share_id')
     .eq('id', params.id)
     .eq('user_email', session.user.email)
@@ -27,7 +27,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   const shareId = randomBytes(8).toString('hex');
   await supabase
-    .from('ideas')
+    .from('marketmind_ideas')
     .update({ share_id: shareId })
     .eq('id', params.id);
 

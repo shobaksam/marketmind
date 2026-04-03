@@ -49,7 +49,7 @@ Return ONLY valid JSON, no markdown.`;
     // Save to Supabase
     const supabase = getServiceSupabase();
     const { data, error } = await supabase
-      .from('ideas')
+      .from('marketmind_ideas')
       .insert({
         user_email: session.user.email,
         idea_text: idea,
@@ -85,7 +85,7 @@ export async function GET() {
 
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
-    .from('ideas')
+    .from('marketmind_ideas')
     .select('*')
     .eq('user_email', session.user.email)
     .order('created_at', { ascending: false });
