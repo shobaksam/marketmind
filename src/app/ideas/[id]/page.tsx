@@ -555,7 +555,7 @@ export default function IdeaPage() {
             // V8 Journey: auto-expand current/completed, collapse future
             const isJourneyCurrent = journeyMode && idx === firstUnresearchedIdx;
             const isJourneyFuture = journeyMode && !research && idx > firstUnresearchedIdx && firstUnresearchedIdx !== -1;
-            const isExpanded = expandedSection === section.id || (journeyMode && research && expandedSection !== `close-${section.id}`);
+            const isExpanded = expandedSection === section.id;
             const isResearching = researchingSection === section.id;
             const hasError = sectionError === section.id;
 
@@ -665,9 +665,19 @@ export default function IdeaPage() {
                     )}
 
                     {research && !isExpanded && (
-                      <p className="text-sm text-neutral-500 cursor-pointer hover:text-neutral-400" onClick={() => setExpandedSection(section.id)}>
-                        Click to see research results →
-                      </p>
+                      <div className="cursor-pointer hover:bg-neutral-800/30 rounded-lg p-2 -mx-2 transition-colors" onClick={() => setExpandedSection(section.id)}>
+                        {research.keyTakeaway && (
+                          <p className="text-sm text-neutral-300 line-clamp-2 mb-1">{research.keyTakeaway}</p>
+                        )}
+                        <div className="flex items-center gap-3">
+                          {research.score && (
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${research.score >= 7 ? 'bg-green-500/20 text-green-400' : research.score >= 4 ? 'bg-amber-500/20 text-amber-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {research.score}/10
+                            </span>
+                          )}
+                          <span className="text-xs text-neutral-500">Tap to expand ▼</span>
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
