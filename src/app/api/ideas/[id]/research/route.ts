@@ -100,47 +100,61 @@ Research Section: "${section.title}"
 Questions to answer:
 ${(section.questions as string[]).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}
 
-Return a JSON object with RICH STRUCTURED DATA for visual rendering:
+You are designing a UNIQUE visual dashboard for this specific section. Choose ONLY the UI blocks that make sense for THIS topic.
+
+Return a JSON object:
 {
   "sectionId": "${sectionId}",
-  "keyTakeaway": "One clear sentence summarizing the most important finding",
+  "keyTakeaway": "One clear sentence — the #1 thing to know",
   "score": 7,
-  "stats": [
-    {"label": "Market Size", "value": "$2.4B", "icon": "📊", "trend": "up", "description": "Growing 12% annually"},
-    {"label": "Avg Startup Cost", "value": "$45K", "icon": "💰", "trend": "neutral"},
-    {"label": "Break-even", "value": "18 mo", "icon": "⏱️", "trend": "neutral"},
-    {"label": "Competition", "value": "Medium", "icon": "🏢", "trend": "up"}
-  ],
-  "insights": [
-    {"text": "Clear actionable insight", "type": "opportunity", "importance": "high"},
-    {"text": "A risk to watch out for", "type": "risk", "importance": "medium"},
-    {"text": "Neutral observation", "type": "neutral", "importance": "low"}
-  ],
-  "costBreakdown": [
-    {"item": "Equipment", "low": 5000, "high": 15000},
-    {"item": "Marketing", "low": 2000, "high": 8000}
-  ],
-  "marketSegments": [
-    {"name": "Segment A", "value": 40},
-    {"name": "Segment B", "value": 35},
-    {"name": "Segment C", "value": 25}
-  ],
-  "competitors": [
-    {"name": "Competitor A", "price": "$49/mo", "rating": 4.2, "strengths": "Brand recognition"}
-  ],
-  "resources": [{"title": "Resource name", "url": "https://...", "type": "article|video|tool"}]
+  "layout": [
+    // YOU CHOOSE which blocks to include and in what order. Pick 3-6 that fit THIS section best.
+    // Available block types:
+
+    // "stat-grid" — Big number cards. Use for market sizes, costs, percentages, counts.
+    {"type": "stat-grid", "data": [{"label": "Market Size", "value": "$2.4B", "icon": "📊", "trend": "up", "description": "Growing 12% yearly"}]},
+
+    // "bar-chart" — Horizontal bar chart for cost breakdowns, budget allocations, comparisons.
+    {"type": "bar-chart", "title": "Startup Costs", "data": [{"item": "Equipment", "low": 5000, "high": 15000}]},
+
+    // "pie-chart" — Donut chart for market segments, demographics, distributions.
+    {"type": "pie-chart", "title": "Market Segments", "data": [{"name": "Segment A", "value": 40}]},
+
+    // "pros-cons" — Two-column pros and cons. Great for risks/opportunities, advantages/disadvantages.
+    {"type": "pros-cons", "pros": [{"text": "Growing market", "importance": "high"}], "cons": [{"text": "High competition", "importance": "medium"}]},
+
+    // "checklist" — Action items or requirements list. Great for permits, regulations, steps to take.
+    {"type": "checklist", "title": "Requirements", "items": [{"text": "Business license", "checked": false, "detail": "Apply at city hall, $150"}]},
+
+    // "comparison-table" — Compare competitors, products, options side by side.
+    {"type": "comparison-table", "title": "Competitors", "columns": ["Name", "Price", "Rating", "Notes"], "rows": [["Competitor A", "$49/mo", "4.5★", "Market leader"]]},
+
+    // "timeline" — Sequential steps or milestones. Great for launch plans, processes.
+    {"type": "timeline", "title": "Launch Timeline", "steps": [{"label": "Month 1", "text": "Secure permits and location", "icon": "📋"}]},
+
+    // "callout" — Important warning, tip, or highlight box.
+    {"type": "callout", "style": "warning|tip|info|success", "title": "Important", "text": "You'll need a food handler's permit before opening."},
+
+    // "number-highlight" — One BIG featured number with context. Use for the most impressive stat.
+    {"type": "number-highlight", "value": "$127K", "label": "Average First-Year Revenue", "context": "Based on similar businesses in the area", "trend": "up"},
+
+    // "quote" — Real testimonial or expert quote.
+    {"type": "quote", "text": "The food truck scene here is booming", "source": "San Diego Food Truck Association", "url": "https://..."},
+
+    // "insights" — Color-coded insight cards (opportunity/risk/neutral).
+    {"type": "insights", "data": [{"text": "Clear insight", "kind": "opportunity|risk|neutral", "importance": "high|medium|low"}]},
+
+    // "resources" — Links to articles, videos, tools.
+    {"type": "resources", "data": [{"title": "Resource name", "url": "https://...", "kind": "article|video|tool"}]}
+  ]
 }
 
-RULES:
-- stats: 3-6 items with BIG numbers people can scan instantly. Use $ and % formatting. Every stat needs an emoji icon.
-- insights: 3-8 items. Tag each as opportunity/risk/neutral and high/medium/low importance.
-- costBreakdown: Include if costs are relevant (most sections). Use realistic ranges.
-- marketSegments: Include if market data is relevant. Values should sum to ~100 (percentages).
-- competitors: Include real competitor names with approximate pricing and ratings.
-- resources: Real URLs to articles, YouTube videos, or tools.
-- score: 1-10 how favorable this aspect is.
-- Use simple language a grandmother would understand. No jargon.
-- Be specific with real data, real names, real numbers.${idea.location ? `\n- ALL data must be specific to ${idea.location}. Name real local businesses, use local pricing, reference local laws.` : ''}
+CRITICAL RULES:
+- CHOOSE blocks that FIT this section topic. A "Regulations" section should use checklist + callout + timeline. A "Costs" section should use stat-grid + bar-chart + number-highlight. A "Competition" section should use comparison-table + pie-chart. BE CREATIVE and SPECIFIC.
+- Do NOT use the same layout for every section. Each section should feel different and tailored.
+- Use 3-6 blocks per section. Quality over quantity.
+- Use simple language anyone can understand. No business jargon.
+- Include REAL data, real business names, real numbers, real URLs.${idea.location ? `\n- ALL data MUST be specific to ${idea.location}. Real local businesses, local prices, local laws.` : ''}
 
 Return ONLY valid JSON.`;
 
@@ -159,6 +173,9 @@ Return ONLY valid JSON.`;
     // Ensure required fields always exist
     research.sectionId = sectionId;
     research.score = research.score || 5;
+    // Preserve layout array from new dynamic format
+    research.layout = research.layout || [];
+    // Legacy fields for backward compat
     research.stats = research.stats || [];
     research.insights = research.insights || [];
     research.costBreakdown = research.costBreakdown || research.estimatedCosts || [];

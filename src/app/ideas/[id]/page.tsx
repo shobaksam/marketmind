@@ -384,7 +384,7 @@ export default function IdeaPage() {
           </div>
 
           {/* V8: Progress Stepper */}
-          <div className="mt-3 flex items-center gap-1 overflow-x-auto pb-1">
+          <div className="mt-3 flex items-center gap-1 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {idea.framework.sections?.map((section, idx) => {
               const done = !!(idea.research && idea.research[section.id]);
               const isCurrent = idx === firstUnresearchedIdx;
