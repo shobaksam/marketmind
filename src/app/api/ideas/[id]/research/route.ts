@@ -121,7 +121,7 @@ JSON structure:
 RULES: Pick blocks that FIT this topic. Costs→bar-chart+stat-grid. Regulations→checklist+callout. Competition→comparison-table+pie-chart. Use real data, real names, real numbers.${idea.location ? ` ALL data specific to ${idea.location}.` : ''} Simple language. Return ONLY valid JSON.`;
 
   try {
-    const aiResponse = await aiGenerate(prompt, 6000);
+    const aiResponse = await aiGenerate(prompt, 2000);
     let research;
     try {
       const match = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
