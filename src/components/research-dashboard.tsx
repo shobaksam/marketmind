@@ -59,11 +59,13 @@ function KeyTakeaway({ text, score }: { text: string; score: number }) {
 }
 
 // ─── Block: Stat Grid ───
-function StatGridBlock({ data }: { data: { label: string; value: string; icon: string; trend?: string; description?: string }[] }) {
+function StatGridBlock({ data }: { data: ({ label: string; value: string; icon: string; trend?: string; description?: string } | string)[] }) {
   if (!data?.length) return null;
+  // Normalize: AI sometimes returns strings instead of objects
+  const normalized = data.map(d => typeof d === 'string' ? { label: d, value: '', icon: '📊' } : d);
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-      {data.map((s, i) => (
+      {normalized.map((s, i) => (
         <div key={i} className="bg-neutral-800/60 rounded-xl p-4 border border-neutral-700/50 hover:border-amber-500/30 transition-colors">
           <div className="text-2xl mb-1">{s.icon}</div>
           <div className="flex items-baseline gap-1">
@@ -170,23 +172,26 @@ function ProsConsBlock({ pros, cons }: { pros?: { text: string; importance?: str
 }
 
 // ─── Block: Checklist ───
-function ChecklistBlock({ title, items }: { title?: string; items: { text: string; checked?: boolean; detail?: string }[] }) {
+function ChecklistBlock({ title, items }: { title?: string; items: (string | { text: string; checked?: boolean; detail?: string })[] }) {
   if (!items?.length) return null;
   return (
     <div className="mb-5">
       <h4 className="text-sm font-semibold text-purple-300 mb-3">📋 {title || 'Checklist'}</h4>
       <div className="bg-neutral-800/40 rounded-xl border border-neutral-700/50 divide-y divide-neutral-700/30">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-start gap-3 p-3">
-            <span className={`mt-0.5 shrink-0 ${item.checked ? 'text-green-400' : 'text-neutral-500'}`}>
-              {item.checked ? '✅' : '☐'}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-neutral-200">{item.text}</p>
-              {item.detail && <p className="text-xs text-neutral-500 mt-0.5">{item.detail}</p>}
+        {items.map((raw, i) => {
+          const item = typeof raw === 'string' ? { text: raw, checked: false, detail: undefined } : raw;
+          return (
+            <div key={i} className="flex items-start gap-3 p-3">
+              <span className={`mt-0.5 shrink-0 ${item.checked ? 'text-green-400' : 'text-neutral-500'}`}>
+                {item.checked ? '✅' : '☐'}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-neutral-200">{item.text}</p>
+                {item.detail && <p className="text-xs text-neutral-500 mt-0.5">{item.detail}</p>}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
