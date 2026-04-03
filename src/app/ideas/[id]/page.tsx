@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { IdeaDetailSkeleton } from '@/components/ui/skeleton';
 import { FadeIn, FadeInStagger, FadeInItem } from '@/components/animate';
 import jsPDF from 'jspdf';
+import { ResearchDashboard } from '@/components/research-dashboard';
 
 interface Section {
   id: string;
@@ -21,9 +22,15 @@ interface Section {
 
 interface Research {
   sectionId: string;
-  content: string;
+  content?: string;
+  keyTakeaway?: string;
   keyInsights?: string[];
+  stats?: { label: string; value: string; icon: string; trend?: string }[];
+  insights?: { text: string; type: string; importance: string }[];
   estimatedCosts?: { item: string; low: number; high: number }[];
+  costBreakdown?: { item: string; low: number; high: number }[];
+  marketSegments?: { name: string; value: number }[];
+  competitors?: { name: string; price: string; rating: number; strengths?: string }[];
   risks?: string[];
   opportunities?: string[];
   resources?: { title: string; url: string; type: string }[];
@@ -431,62 +438,7 @@ export default function IdeaPage() {
                     )}
 
                     {research && isExpanded && (
-                      <div className="space-y-6 pt-2">
-                        {research.keyInsights && research.keyInsights.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-semibold text-amber-300 mb-2">💡 Key Insights</h4>
-                            <div className="space-y-1">
-                              {research.keyInsights.map((insight, i) => (
-                                <p key={i} className="text-sm text-neutral-300">• {insight}</p>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">{research.content}</div>
-
-                        {research.estimatedCosts && research.estimatedCosts.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-semibold text-green-300 mb-2">💰 Estimated Costs</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              {research.estimatedCosts.map((cost, i) => (
-                                <div key={i} className="bg-neutral-800/50 rounded-lg p-3">
-                                  <p className="text-xs text-neutral-400">{cost.item}</p>
-                                  <p className="text-sm font-medium text-white">${cost.low.toLocaleString()} - ${cost.high.toLocaleString()}</p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {research.risks && research.risks.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-semibold text-red-300 mb-2">⚠️ Risks</h4>
-                              {research.risks.map((r, i) => <p key={i} className="text-sm text-neutral-400">• {r}</p>)}
-                            </div>
-                          )}
-                          {research.opportunities && research.opportunities.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-semibold text-green-300 mb-2">🚀 Opportunities</h4>
-                              {research.opportunities.map((o, i) => <p key={i} className="text-sm text-neutral-400">• {o}</p>)}
-                            </div>
-                          )}
-                        </div>
-
-                        {research.resources && research.resources.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-semibold text-purple-300 mb-2">📚 Resources</h4>
-                            <div className="space-y-1">
-                              {research.resources.map((r, i) => (
-                                <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="block text-sm text-amber-400 hover:text-amber-300 truncate">
-                                  {r.type === 'video' ? '🎥' : r.type === 'tool' ? '🔧' : '📄'} {r.title}
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      <ResearchDashboard research={research} />
                     )}
 
                     {research && !isExpanded && (
