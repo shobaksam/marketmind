@@ -219,13 +219,20 @@ export default function IdeaPage() {
     const maxWidth = pageWidth - margin * 2;
     let y = 20;
 
+    const addPage = () => {
+      doc.addPage();
+      doc.setFillColor(10, 10, 10);
+      doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F');
+      y = 20;
+    };
+
     const addText = (text: string, size: number, bold = false, color: [number, number, number] = [255, 255, 255]) => {
       doc.setFontSize(size);
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setTextColor(...color);
       const lines = doc.splitTextToSize(text, maxWidth);
       for (const line of lines) {
-        if (y > 275) { doc.addPage(); y = 20; }
+        if (y > 275) { addPage(); }
         doc.text(line, margin, y);
         y += size * 0.5;
       }
@@ -245,7 +252,7 @@ export default function IdeaPage() {
 
     for (const section of idea.framework.sections) {
       const research = idea.research?.[section.id];
-      if (y > 250) { doc.addPage(); doc.setFillColor(10, 10, 10); doc.rect(0, 0, pageWidth, doc.internal.pageSize.getHeight(), 'F'); y = 20; }
+      if (y > 250) { addPage(); }
       addText(`${section.icon} ${section.title}`, 14, true, [245, 158, 11]);
       if (research) {
         if (research.keyTakeaway) {
