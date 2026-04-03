@@ -1,36 +1,7 @@
-// AI provider abstraction: tries Gemini first, falls back to Groq
+// AI provider abstraction: tries Groq first (faster, more reliable), falls back to Gemini
 
 export async function aiGenerate(prompt: string, maxTokens: number = 2000): Promise<string> {
-  // Try Gemini first
-  const geminiKey = process.env.GEMINI_API_KEY?.trim();
-  if (geminiKey) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
-          }),
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (text) return text;
-      }
-      const errText = await res.text();
-      console.warn('Gemini failed, status:', res.status, 'body:', errText.slice(0, 200));
-    } catch (e) {
-      console.warn('Gemini error:', e);
-    }
-  } else {
-    console.warn('No GEMINI_API_KEY set');
-  }
-
-  // Fallback to Groq
+  // Try Groq first (faster response, Gemini often rate-limited on free tier)
   const groqKey = process.env.GROQ_API_KEY?.trim();
   if (groqKey) {
     try {
@@ -59,6 +30,32 @@ export async function aiGenerate(prompt: string, maxTokens: number = 2000): Prom
     }
   } else {
     console.warn('No GROQ_API_KEY set');
+  }
+
+  // Fallback to Gemini
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  if (geminiKey) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
+          }),
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (text) return text;
+      }
+      console.warn('Gemini failed, status:', res.status);
+    } catch (e) {
+      console.warn('Gemini error:', e);
+    }
   }
 
   throw new Error('All AI providers failed - check API keys');
