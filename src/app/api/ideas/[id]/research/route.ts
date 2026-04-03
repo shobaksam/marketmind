@@ -100,63 +100,25 @@ Research Section: "${section.title}"
 Questions to answer:
 ${(section.questions as string[]).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}
 
-You are designing a UNIQUE visual dashboard for this specific section. Choose ONLY the UI blocks that make sense for THIS topic.
+Return a JSON object with a "layout" array of UI blocks. Pick 3-5 block types that best fit THIS section:
 
-Return a JSON object:
-{
-  "sectionId": "${sectionId}",
-  "keyTakeaway": "One clear sentence — the #1 thing to know",
-  "score": 7,
-  "layout": [
-    // YOU CHOOSE which blocks to include and in what order. Pick 3-6 that fit THIS section best.
-    // Available block types:
+Block types (use exact format):
+- stat-grid: {"type":"stat-grid","data":[{"label":"Name","value":"$X","icon":"📊"}]}
+- bar-chart: {"type":"bar-chart","title":"Title","data":[{"item":"Name","low":1000,"high":5000}]}
+- pie-chart: {"type":"pie-chart","title":"Title","data":[{"name":"A","value":40}]}
+- pros-cons: {"type":"pros-cons","pros":[{"text":"...","importance":"high"}],"cons":[{"text":"..."}]}
+- checklist: {"type":"checklist","title":"Title","items":[{"text":"...","detail":"..."}]}
+- comparison-table: {"type":"comparison-table","title":"Title","columns":["A","B"],"rows":[["x","y"]]}
+- timeline: {"type":"timeline","title":"Title","steps":[{"label":"Step 1","text":"..."}]}
+- callout: {"type":"callout","style":"warning","title":"Title","text":"..."}
+- number-highlight: {"type":"number-highlight","value":"$50K","label":"Label","context":"..."}
+- insights: {"type":"insights","data":[{"text":"...","kind":"opportunity","importance":"high"}]}
+- resources: {"type":"resources","data":[{"title":"Name","url":"https://...","kind":"article"}]}
 
-    // "stat-grid" — Big number cards. Use for market sizes, costs, percentages, counts.
-    {"type": "stat-grid", "data": [{"label": "Market Size", "value": "$2.4B", "icon": "📊", "trend": "up", "description": "Growing 12% yearly"}]},
+JSON structure:
+{"sectionId":"${sectionId}","keyTakeaway":"One sentence","score":7,"layout":[...blocks...]}
 
-    // "bar-chart" — Horizontal bar chart for cost breakdowns, budget allocations, comparisons.
-    {"type": "bar-chart", "title": "Startup Costs", "data": [{"item": "Equipment", "low": 5000, "high": 15000}]},
-
-    // "pie-chart" — Donut chart for market segments, demographics, distributions.
-    {"type": "pie-chart", "title": "Market Segments", "data": [{"name": "Segment A", "value": 40}]},
-
-    // "pros-cons" — Two-column pros and cons. Great for risks/opportunities, advantages/disadvantages.
-    {"type": "pros-cons", "pros": [{"text": "Growing market", "importance": "high"}], "cons": [{"text": "High competition", "importance": "medium"}]},
-
-    // "checklist" — Action items or requirements list. Great for permits, regulations, steps to take.
-    {"type": "checklist", "title": "Requirements", "items": [{"text": "Business license", "checked": false, "detail": "Apply at city hall, $150"}]},
-
-    // "comparison-table" — Compare competitors, products, options side by side.
-    {"type": "comparison-table", "title": "Competitors", "columns": ["Name", "Price", "Rating", "Notes"], "rows": [["Competitor A", "$49/mo", "4.5★", "Market leader"]]},
-
-    // "timeline" — Sequential steps or milestones. Great for launch plans, processes.
-    {"type": "timeline", "title": "Launch Timeline", "steps": [{"label": "Month 1", "text": "Secure permits and location", "icon": "📋"}]},
-
-    // "callout" — Important warning, tip, or highlight box.
-    {"type": "callout", "style": "warning|tip|info|success", "title": "Important", "text": "You'll need a food handler's permit before opening."},
-
-    // "number-highlight" — One BIG featured number with context. Use for the most impressive stat.
-    {"type": "number-highlight", "value": "$127K", "label": "Average First-Year Revenue", "context": "Based on similar businesses in the area", "trend": "up"},
-
-    // "quote" — Real testimonial or expert quote.
-    {"type": "quote", "text": "The food truck scene here is booming", "source": "San Diego Food Truck Association", "url": "https://..."},
-
-    // "insights" — Color-coded insight cards (opportunity/risk/neutral).
-    {"type": "insights", "data": [{"text": "Clear insight", "kind": "opportunity|risk|neutral", "importance": "high|medium|low"}]},
-
-    // "resources" — Links to articles, videos, tools.
-    {"type": "resources", "data": [{"title": "Resource name", "url": "https://...", "kind": "article|video|tool"}]}
-  ]
-}
-
-CRITICAL RULES:
-- CHOOSE blocks that FIT this section topic. A "Regulations" section should use checklist + callout + timeline. A "Costs" section should use stat-grid + bar-chart + number-highlight. A "Competition" section should use comparison-table + pie-chart. BE CREATIVE and SPECIFIC.
-- Do NOT use the same layout for every section. Each section should feel different and tailored.
-- Use 3-6 blocks per section. Quality over quantity.
-- Use simple language anyone can understand. No business jargon.
-- Include REAL data, real business names, real numbers, real URLs.${idea.location ? `\n- ALL data MUST be specific to ${idea.location}. Real local businesses, local prices, local laws.` : ''}
-
-Return ONLY valid JSON.`;
+RULES: Pick blocks that FIT this topic. Costs→bar-chart+stat-grid. Regulations→checklist+callout. Competition→comparison-table+pie-chart. Use real data, real names, real numbers.${idea.location ? ` ALL data specific to ${idea.location}.` : ''} Simple language. Return ONLY valid JSON.`;
 
   try {
     const aiResponse = await aiGenerate(prompt, 6000);
