@@ -158,14 +158,16 @@ RULES: Pick blocks that FIT this topic. Costs→bar-chart+stat-grid. Regulations
 
     return NextResponse.json(research);
   } catch (err) {
-    console.error('Research error:', err instanceof Error ? err.message : err);
+    const errMsg = err instanceof Error ? `${err.message}\n${err.stack}` : String(err);
+    console.error('Research error:', errMsg);
     // Return a minimal fallback result instead of 500
+    const errorDetail = err instanceof Error ? err.message : String(err);
     const fallback = {
       sectionId,
       keyTakeaway: 'Research generation encountered an issue. Please try again.',
       score: 5,
       layout: [
-        { type: 'callout', style: 'warning', title: 'Research Incomplete', text: 'We had trouble generating this research. Please click "Research This Section" to try again.' }
+        { type: 'callout', style: 'warning', title: 'Research Incomplete', text: `Error: ${errorDetail.slice(0, 200)}. Please click "Research This Section" to try again.` }
       ],
     };
     // Still try to save partial result
