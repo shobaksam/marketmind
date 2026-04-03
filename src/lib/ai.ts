@@ -1,6 +1,6 @@
 // AI provider abstraction: tries Gemini first, falls back to Groq
 
-export async function aiGenerate(prompt: string, maxTokens: number = 4000): Promise<string> {
+export async function aiGenerate(prompt: string, maxTokens: number = 2000): Promise<string> {
   // Try Gemini first
   const geminiKey = process.env.GEMINI_API_KEY?.trim();
   if (geminiKey) {

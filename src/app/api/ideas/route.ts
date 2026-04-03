@@ -52,7 +52,7 @@ Generate 6-8 sections that are SPECIFICALLY relevant to this business idea. Not 
 Return ONLY valid JSON, no markdown.`;
 
   try {
-    const aiResponse = await aiGenerate(prompt);
+    const aiResponse = await aiGenerate(prompt, 2000);
     const cleaned = aiResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const framework = JSON.parse(cleaned) as Record<string, unknown>;
 
