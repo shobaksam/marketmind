@@ -196,7 +196,22 @@ Return ONLY valid JSON.`;
 
     return NextResponse.json(research);
   } catch (err) {
-    console.error('Research error:', err);
-    return NextResponse.json({ error: 'Research generation failed' }, { status: 500 });
+    console.error('Research error:', err instanceof Error ? err.message : err);
+    // Return a minimal fallback result instead of 500
+    const fallback = {
+      sectionId,
+      keyTakeaway: 'Research generation encountered an issue. Please try again.',
+      score: 5,
+      layout: [
+        { type: 'callout', style: 'warning', title: 'Research Incomplete', text: 'We had trouble generating this research. Please click "Research This Section" to try again.' }
+      ],
+    };
+    // Still try to save partial result
+    try {
+      const existingResearch = (idea.research as Record<string, unknown>) || {};
+      const updatedResearch = { ...existingResearch, [sectionId]: fallback };
+      await supabase.from('marketmind_ideas').update({ research: updatedResearch }).eq('id', params.id);
+    } catch { /* ignore save error */ }
+    return NextResponse.json(fallback);
   }
 }
