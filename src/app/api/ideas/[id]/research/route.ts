@@ -3,6 +3,57 @@ import { getServerSession } from 'next-auth';
 import { aiGenerate } from '@/lib/ai';
 import { getServiceSupabase } from '@/lib/supabase';
 
+function extractStructuredData(sectionId: string, text: string) {
+  const stats: { label: string; value: string; icon: string }[] = [];
+  const insights: { text: string; type: string; importance: string }[] = [];
+  const costBreakdown: { item: string; low: number; high: number }[] = [];
+
+  // Extract dollar amounts as stats
+  const dollarMatches = Array.from(text.matchAll(/(\b[A-Z][a-z ]+(?:cost|price|revenue|market|budget|salary|fee|investment)s?)\b[^$]*?\$([0-9,.]+[KMBkmb]?)/gi));
+  for (const m of dollarMatches) {
+    stats.push({ label: m[1].trim(), value: `$${m[2]}`, icon: '💰' });
+  }
+
+  // Extract percentages as stats
+  const pctMatches = Array.from(text.matchAll(/(\b[A-Z][a-z ]+(?:rate|growth|margin|share))\b[^0-9]*?([0-9.]+%)/gi));
+  for (const m of pctMatches) {
+    stats.push({ label: m[1].trim(), value: m[2], icon: '📊' });
+  }
+
+  // Extract cost ranges like "$5,000 - $15,000"
+  const costRanges = Array.from(text.matchAll(/([A-Za-z ]+?):\s*\$([0-9,.]+)[KkMm]?\s*[-–to]+\s*\$([0-9,.]+)[KkMm]?/g));
+  for (const m of costRanges) {
+    const parseNum = (s: string) => parseFloat(s.replace(/,/g, ''));
+    costBreakdown.push({ item: m[1].trim(), low: parseNum(m[2]), high: parseNum(m[3]) });
+  }
+
+  // Extract bullet points as insights
+  const bullets = text.match(/[-•]\s+(.+)/g);
+  if (bullets) {
+    for (const b of bullets.slice(0, 8)) {
+      const clean = b.replace(/^[-•]\s+/, '').trim();
+      const type = /risk|threat|challenge|difficult|expensive|danger/i.test(clean) ? 'risk'
+        : /opportunit|advantage|growing|potential|benefit/i.test(clean) ? 'opportunity' : 'neutral';
+      insights.push({ text: clean, type, importance: 'medium' });
+    }
+  }
+
+  // Extract first sentence as key takeaway
+  const firstSentence = text.match(/^[^.!?]+[.!?]/)?.[0] || text.substring(0, 200);
+
+  return {
+    sectionId,
+    content: text,
+    keyTakeaway: firstSentence.trim(),
+    score: 5,
+    stats: stats.slice(0, 6),
+    insights,
+    costBreakdown,
+    competitors: [],
+    resources: [],
+  };
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession();
   if (!session?.user?.email) {
@@ -91,7 +142,20 @@ Return ONLY valid JSON.`;
       const jsonStr = match ? match[1].trim() : aiResponse.trim();
       research = JSON.parse(jsonStr);
     } catch {
-      research = { sectionId, content: aiResponse, keyInsights: [], score: 5 };
+      // AI returned text instead of JSON — extract what we can
+      research = extractStructuredData(sectionId, aiResponse);
+    }
+
+    // Ensure required fields always exist
+    research.sectionId = sectionId;
+    research.score = research.score || 5;
+    research.stats = research.stats || [];
+    research.insights = research.insights || [];
+    research.costBreakdown = research.costBreakdown || research.estimatedCosts || [];
+    research.competitors = research.competitors || [];
+    research.resources = research.resources || [];
+    if (!research.keyTakeaway && research.keyInsights?.length) {
+      research.keyTakeaway = research.keyInsights[0];
     }
 
     // Save research to idea

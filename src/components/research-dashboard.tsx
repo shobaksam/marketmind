@@ -281,6 +281,36 @@ function ResourceLinks({ resources }: { resources: ResourceItem[] }) {
   );
 }
 
+function FormattedTextFallback({ text }: { text: string }) {
+  const lines = text.split('\n');
+  return (
+    <div className="space-y-2 text-sm">
+      {lines.map((line, i) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+        if (trimmed.startsWith('###')) return <h4 key={i} className="text-amber-400 font-semibold mt-4 mb-1">{trimmed.replace(/^#+\s*/, '')}</h4>;
+        if (trimmed.startsWith('##')) return <h3 key={i} className="text-amber-300 font-bold text-base mt-4 mb-1">{trimmed.replace(/^#+\s*/, '')}</h3>;
+        if (trimmed.startsWith('#')) return <h2 key={i} className="text-amber-200 font-bold text-lg mt-4 mb-2">{trimmed.replace(/^#+\s*/, '')}</h2>;
+        if (/^[-•*]\s/.test(trimmed)) return (
+          <div key={i} className="flex gap-2 pl-2">
+            <span className="text-amber-500 shrink-0">•</span>
+            <span className="text-neutral-300">{trimmed.replace(/^[-•*]\s+/, '')}</span>
+          </div>
+        );
+        if (/^\d+[.)]\s/.test(trimmed)) return (
+          <div key={i} className="flex gap-2 pl-2">
+            <span className="text-amber-500 shrink-0 font-mono text-xs mt-0.5">{trimmed.match(/^\d+/)?.[0]}.</span>
+            <span className="text-neutral-300">{trimmed.replace(/^\d+[.)]\s+/, '')}</span>
+          </div>
+        );
+        // Bold text within **
+        const formatted = trimmed.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>');
+        return <p key={i} className="text-neutral-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: formatted }} />;
+      })}
+    </div>
+  );
+}
+
 // Convert legacy format to structured format for backward compatibility
 function normalizeResearch(research: StructuredResearch): StructuredResearch {
   return {
@@ -315,11 +345,9 @@ export function ResearchDashboard({ research: raw }: { research: StructuredResea
       <CompetitorTable competitors={research.competitors ?? []} />
       <ResourceLinks resources={research.resources ?? []} />
 
-      {/* Fallback: show content if no structured data */}
+      {/* Fallback: show content as formatted text if no structured data */}
       {!hasVisualData && research.content && (
-        <div className="text-sm text-neutral-300 whitespace-pre-wrap leading-relaxed">
-          {research.content}
-        </div>
+        <FormattedTextFallback text={research.content} />
       )}
     </div>
   );
