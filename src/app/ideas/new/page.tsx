@@ -22,6 +22,7 @@ export default function NewIdeaPage() {
   const [idea, setIdea] = useState('');
   const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
@@ -40,9 +41,12 @@ export default function NewIdeaPage() {
       const data = await res.json();
       if (data.id) {
         router.push(`/ideas/${data.id}`);
+      } else {
+        setError(data.error || 'Something went wrong. Please try again.');
       }
     } catch (err) {
       console.error('Failed to submit idea:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -124,9 +128,16 @@ export default function NewIdeaPage() {
                   <p className="text-xs text-neutral-500">Adding a location gives you hyper-local market data, competitors, regulations, and costs specific to your area.</p>
                 </div>
 
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 mb-4 text-sm text-red-300">
+                    ⚠️ {error}
+                    <button onClick={() => setError(null)} className="ml-2 underline text-red-400">Dismiss</button>
+                  </div>
+                )}
                 <Button
                   type="submit"
                   disabled={loading || !idea.trim()}
+                  onClick={() => setError(null)}
                   className="w-full h-14 bg-amber-500 hover:bg-amber-600 text-black text-lg font-bold rounded-xl"
                 >
                   {loading ? (

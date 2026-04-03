@@ -81,8 +81,9 @@ Return ONLY valid JSON, no markdown.`;
 
     return NextResponse.json({ id: data.id, framework });
   } catch (err) {
-    console.error('AI generation error:', err);
-    return NextResponse.json({ error: 'Failed to generate framework' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('AI generation error:', msg);
+    return NextResponse.json({ error: `Failed to generate framework: ${msg}` }, { status: 500 });
   }
 }
 
