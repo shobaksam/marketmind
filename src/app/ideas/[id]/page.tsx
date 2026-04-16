@@ -14,6 +14,7 @@ import { FinancialProjections } from '@/components/financial-projections';
 import { CompetitorAnalysis } from '@/components/competitor-analysis';
 import { ScoreBreakdown } from '@/components/score-breakdown';
 import { ChatAssistant } from '@/components/chat-assistant';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const LOADING_MESSAGES = [
   '🔍 Analyzing market data...',
@@ -131,7 +132,9 @@ export default function IdeaPage() {
   const [copied, setCopied] = useState(false);
   const [sectionError, setSectionError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [journeyMode, setJourneyMode] = useState(true); // V8: auto-expand journey flow
+  const [journeyMode, setJourneyMode] = useState(false); // collapsed-first layout; users opt into Guided Mode
+  const [depthOpen, setDepthOpen] = useState<null | 'swot' | 'projections' | 'plan' | 'competitors'>(null);
+  const [showHeroWhy, setShowHeroWhy] = useState(false);
   const [executiveSummary, setExecutiveSummary] = useState<{ executiveSummary: string; verdict: string; topStrengths: string[]; topRisks: string[]; nextSteps: string[] } | null>(null);
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -184,11 +187,13 @@ export default function IdeaPage() {
         if (!prev) return prev;
         return { ...prev, research: { ...prev.research, [sectionId]: research } };
       });
-      setExpandedSection(sectionId);
-      // V8 Journey: auto-scroll to this section
-      setTimeout(() => {
-        document.getElementById(`section-${sectionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 300);
+      // Keep sections collapsed by default — user taps the card to expand
+      if (journeyMode) {
+        setExpandedSection(sectionId);
+        setTimeout(() => {
+          document.getElementById(`section-${sectionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      }
     } catch {
       setSectionError(sectionId);
     } finally {
@@ -556,71 +561,101 @@ export default function IdeaPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Summary */}
+        {/* Hero Verdict — punchline-first */}
         <FadeIn>
-          <Card className="border-neutral-800 bg-neutral-900/50 mb-8">
-            <CardContent className="pt-6">
-              <p className="text-neutral-300 leading-relaxed text-base">{idea.summary}</p>
-              <div className="flex flex-wrap gap-4 mt-4 text-sm text-neutral-500">
-                {idea.location && <span className="flex items-center gap-1">📍 {idea.location}</span>}
-                <span>📊 {progressPct}% complete</span>
+          {(() => {
+            const vKey = executiveSummary?.verdict;
+            const tone = vKey === 'GO'
+              ? { label: 'Go for it', sub: 'Clear edge', bg: 'bg-emerald-500/10', text: 'text-emerald-300', ring: 'ring-emerald-500/30', dot: 'bg-emerald-400' }
+              : vKey === 'CAUTION'
+              ? { label: 'Has potential', sub: 'Needs a sharper angle', bg: 'bg-amber-500/10', text: 'text-amber-300', ring: 'ring-amber-500/30', dot: 'bg-amber-400' }
+              : vKey === 'NO-GO'
+              ? { label: 'Skip it', sub: 'Try something else', bg: 'bg-red-500/10', text: 'text-red-300', ring: 'ring-red-500/30', dot: 'bg-red-400' }
+              : { label: 'In progress', sub: 'Research to unlock the verdict', bg: 'bg-neutral-800/50', text: 'text-neutral-300', ring: 'ring-neutral-700', dot: 'bg-neutral-500' };
+            const punchline = executiveSummary
+              ? (executiveSummary.executiveSummary?.split('\n').find(l => l.trim())?.trim().split(/[.!?]/)[0] || idea.summary)
+              : idea.summary;
+            const rest = executiveSummary?.executiveSummary?.replace(punchline, '').trim();
+            return (
+              <div className={`mb-8 rounded-2xl p-6 sm:p-8 ring-1 ${tone.ring} ${tone.bg}`}>
+                <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
+                  <div className="flex flex-col">
+                    <div className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest px-2.5 py-1 rounded-md ${tone.bg} ${tone.text} w-fit`}>
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${tone.dot}`} />
+                      {tone.label}
+                    </div>
+                    <span className="text-[10px] text-neutral-500 mt-1 px-1">{tone.sub}</span>
+                  </div>
+                  {!executiveSummary && completedSections >= 2 && (
+                    <Button
+                      onClick={handleGenerateSummary}
+                      disabled={generatingSummary}
+                      size="sm"
+                      className="bg-amber-500 hover:bg-amber-600 text-black font-semibold text-xs"
+                    >
+                      {generatingSummary ? '⏳ Thinking…' : 'Get the verdict →'}
+                    </Button>
+                  )}
+                </div>
+                <div className="text-xl sm:text-2xl md:text-3xl font-semibold leading-snug tracking-tight text-white">
+                  {punchline}
+                </div>
+                {executiveSummary && (rest || (executiveSummary.topStrengths?.length || executiveSummary.topRisks?.length || executiveSummary.nextSteps?.length)) && (
+                  showHeroWhy ? (
+                    <div className="mt-4 space-y-4">
+                      {rest && <p className="text-sm text-neutral-400 leading-relaxed whitespace-pre-line">{rest}</p>}
+                      <div className="grid sm:grid-cols-3 gap-3">
+                        {executiveSummary.topStrengths?.length ? (
+                          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+                            <h4 className="text-[10px] font-semibold text-emerald-400 uppercase tracking-widest mb-2">Strengths</h4>
+                            {executiveSummary.topStrengths.map((s, i) => (
+                              <p key={i} className="text-xs text-neutral-300 mb-1">• {s}</p>
+                            ))}
+                          </div>
+                        ) : null}
+                        {executiveSummary.topRisks?.length ? (
+                          <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3">
+                            <h4 className="text-[10px] font-semibold text-red-400 uppercase tracking-widest mb-2">Risks</h4>
+                            {executiveSummary.topRisks.map((r, i) => (
+                              <p key={i} className="text-xs text-neutral-300 mb-1">• {r}</p>
+                            ))}
+                          </div>
+                        ) : null}
+                        {executiveSummary.nextSteps?.length ? (
+                          <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3">
+                            <h4 className="text-[10px] font-semibold text-amber-400 uppercase tracking-widest mb-2">Next</h4>
+                            {executiveSummary.nextSteps.map((s, i) => (
+                              <p key={i} className="text-xs text-neutral-300 mb-1">{i + 1}. {s}</p>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                      <button onClick={() => setShowHeroWhy(false)} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+                        show less
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowHeroWhy(true)} className="mt-3 text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
+                      why?
+                    </button>
+                  )
+                )}
+                {!executiveSummary && (
+                  <p className="mt-3 text-xs text-neutral-500">
+                    {completedSections < 2
+                      ? 'Research at least 2 sections and we\'ll give you a one-line verdict.'
+                      : 'Tap "Get the verdict" above to see the bottom line.'}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-4 mt-5 text-xs text-neutral-500">
+                  {idea.location && <span className="flex items-center gap-1">📍 {idea.location}</span>}
+                  <span>📊 {progressPct}% complete</span>
+                  {idea.swot && <span>🎯 Viability {idea.swot.overallScore}/10</span>}
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            );
+          })()}
         </FadeIn>
-
-        {/* V13: Executive Summary */}
-        {executiveSummary ? (
-          <FadeIn delay={0.05}>
-            <Card className="border-neutral-800 bg-gradient-to-br from-neutral-900/80 to-amber-950/10 mb-8">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold flex items-center gap-2">📋 Executive Summary</h2>
-                  <Badge className={`text-sm px-3 py-1 ${
-                    executiveSummary.verdict === 'GO' ? 'bg-green-500/20 text-green-400' :
-                    executiveSummary.verdict === 'CAUTION' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-red-500/20 text-red-400'
-                  }`}>
-                    {executiveSummary.verdict === 'GO' ? '🟢' : executiveSummary.verdict === 'CAUTION' ? '🟡' : '🔴'} {executiveSummary.verdict}
-                  </Badge>
-                </div>
-                <p className="text-sm text-neutral-300 leading-relaxed mb-4 whitespace-pre-line">{executiveSummary.executiveSummary}</p>
-                <div className="grid sm:grid-cols-3 gap-3">
-                  <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-green-400 mb-2">💪 Top Strengths</h4>
-                    {executiveSummary.topStrengths?.map((s, i) => (
-                      <p key={i} className="text-xs text-neutral-300 mb-1">• {s}</p>
-                    ))}
-                  </div>
-                  <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-red-400 mb-2">⚠️ Top Risks</h4>
-                    {executiveSummary.topRisks?.map((r, i) => (
-                      <p key={i} className="text-xs text-neutral-300 mb-1">• {r}</p>
-                    ))}
-                  </div>
-                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
-                    <h4 className="text-xs font-semibold text-blue-400 mb-2">🚀 Next Steps</h4>
-                    {executiveSummary.nextSteps?.map((s, i) => (
-                      <p key={i} className="text-xs text-neutral-300 mb-1">{i + 1}. {s}</p>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </FadeIn>
-        ) : completedSections >= 3 && (
-          <FadeIn delay={0.05}>
-            <div className="mb-8 text-center">
-              <Button
-                onClick={handleGenerateSummary}
-                disabled={generatingSummary}
-                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold"
-              >
-                {generatingSummary ? '⏳ Generating Executive Summary...' : '📋 Generate Executive Summary'}
-              </Button>
-            </div>
-          </FadeIn>
-        )}
 
         {/* V23: Score Breakdown */}
         {completedSections >= 3 && (() => {
@@ -639,11 +674,34 @@ export default function IdeaPage() {
           );
         })()}
 
-        {/* SWOT Analysis - 2x2 Grid */}
+        {/* More depth section header */}
+        {(idea.swot || projections || actionPlan || competitorData) && (
+          <div className="mb-4 mt-10">
+            <h2 className="text-xl font-bold">📚 More depth</h2>
+            <p className="text-xs text-neutral-500 mt-1">Tap to expand each section.</p>
+          </div>
+        )}
+
+        {/* SWOT Analysis - collapsible */}
         {idea.swot && (
           <FadeIn delay={0.1}>
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4">📊 SWOT Analysis</h2>
+            <div className="mb-3 rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+              <button onClick={() => setDepthOpen(depthOpen === 'swot' ? null : 'swot')} className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-900/70 transition-colors">
+                <span className="flex items-center gap-3">
+                  <span className="text-lg">📊</span>
+                  <span className="font-semibold text-white">SWOT Analysis</span>
+                  <Badge className={`text-xs ${
+                    idea.swot.overallScore >= 7 ? 'bg-green-500/20 text-green-300' :
+                    idea.swot.overallScore >= 4 ? 'bg-amber-500/20 text-amber-300' :
+                    'bg-red-500/20 text-red-300'
+                  }`}>
+                    {idea.swot.overallScore}/10
+                  </Badge>
+                </span>
+                {depthOpen === 'swot' ? <ChevronUp className="h-4 w-4 text-neutral-500" /> : <ChevronDown className="h-4 w-4 text-neutral-500" />}
+              </button>
+              {depthOpen === 'swot' && (
+            <div className="px-5 pb-5">
               <div className="rounded-xl border border-neutral-800 overflow-hidden mb-4">
                 {/* Header row labels */}
                 <div className="grid grid-cols-2">
@@ -719,6 +777,8 @@ export default function IdeaPage() {
                 </div>
               </div>
             </div>
+              )}
+            </div>
           </FadeIn>
         )}
 
@@ -731,41 +791,62 @@ export default function IdeaPage() {
           </div>
         )}
 
-        {/* V17: Financial Projections */}
+        {/* V17: Financial Projections — collapsible */}
         {projections ? (
           <FadeIn delay={0.15}>
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4">💰 Financial Projections</h2>
-              <FinancialProjections data={projections} />
+            <div className="mb-3 rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+              <button onClick={() => setDepthOpen(depthOpen === 'projections' ? null : 'projections')} className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-900/70 transition-colors">
+                <span className="flex items-center gap-3">
+                  <span className="text-lg">💰</span>
+                  <span className="font-semibold text-white">Financial Projections</span>
+                </span>
+                {depthOpen === 'projections' ? <ChevronUp className="h-4 w-4 text-neutral-500" /> : <ChevronDown className="h-4 w-4 text-neutral-500" />}
+              </button>
+              {depthOpen === 'projections' && (
+                <div className="px-5 pb-5">
+                  <FinancialProjections data={projections} />
+                </div>
+              )}
             </div>
           </FadeIn>
         ) : completedSections >= 2 && (
           <FadeIn delay={0.15}>
-            <div className="mb-8 text-center">
+            <div className="mb-3 rounded-xl border border-dashed border-neutral-800 bg-neutral-900/20 px-5 py-4 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-3 text-sm text-neutral-400">
+                <span className="text-lg">💰</span>
+                <span>Financial Projections</span>
+              </span>
               <Button
                 onClick={handleGenerateProjections}
                 disabled={generatingProjections}
+                size="sm"
                 variant="outline"
-                className="border-neutral-700"
+                className="border-neutral-700 text-xs"
               >
-                {generatingProjections ? '⏳ Generating Projections...' : '💰 Generate Financial Projections'}
+                {generatingProjections ? '⏳ Generating...' : 'Generate'}
               </Button>
             </div>
           </FadeIn>
         )}
 
-        {/* V19: Action Plan */}
+        {/* V19: Action Plan — collapsible */}
         {actionPlan ? (
           <FadeIn delay={0.2}>
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">🎯 Action Plan</h2>
-                {actionPlan.totalTimeline && (
-                  <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20">
-                    Timeline: {actionPlan.totalTimeline}
-                  </Badge>
-                )}
-              </div>
+            <div className="mb-3 rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+              <button onClick={() => setDepthOpen(depthOpen === 'plan' ? null : 'plan')} className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-900/70 transition-colors">
+                <span className="flex items-center gap-3">
+                  <span className="text-lg">🎯</span>
+                  <span className="font-semibold text-white">Action Plan</span>
+                  {actionPlan.totalTimeline && (
+                    <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-xs">
+                      {actionPlan.totalTimeline}
+                    </Badge>
+                  )}
+                </span>
+                {depthOpen === 'plan' ? <ChevronUp className="h-4 w-4 text-neutral-500" /> : <ChevronDown className="h-4 w-4 text-neutral-500" />}
+              </button>
+              {depthOpen === 'plan' && (
+                <div className="px-5 pb-5">
               <div className="space-y-4">
                 {actionPlan.phases?.map((phase: { name: string; duration: string; icon: string; steps: { task: string; duration: string; priority: string; cost: string }[] }, pi: number) => (
                   <Card key={pi} className="border-neutral-800 bg-neutral-900/50">
@@ -807,36 +888,57 @@ export default function IdeaPage() {
                   </div>
                 </div>
               )}
+                </div>
+              )}
             </div>
           </FadeIn>
         ) : completedSections >= 2 && (
           <FadeIn delay={0.2}>
-            <div className="mb-8 text-center">
-              <Button onClick={handleGeneratePlan} disabled={generatingPlan} variant="outline" className="border-neutral-700">
-                {generatingPlan ? '⏳ Generating Action Plan...' : '🎯 Generate Action Plan'}
+            <div className="mb-3 rounded-xl border border-dashed border-neutral-800 bg-neutral-900/20 px-5 py-4 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-3 text-sm text-neutral-400">
+                <span className="text-lg">🎯</span>
+                <span>Action Plan</span>
+              </span>
+              <Button onClick={handleGeneratePlan} disabled={generatingPlan} size="sm" variant="outline" className="border-neutral-700 text-xs">
+                {generatingPlan ? '⏳ Generating...' : 'Generate'}
               </Button>
             </div>
           </FadeIn>
         )}
 
-        {/* V18: Competitor Deep Dive */}
+        {/* V18: Competitor Deep Dive — collapsible */}
         {competitorData ? (
           <FadeIn delay={0.2}>
-            <div className="mb-8">
-              <h2 className="text-xl font-bold mb-4">🏢 Competitor Analysis</h2>
-              <CompetitorAnalysis data={competitorData} />
+            <div className="mb-3 rounded-xl border border-neutral-800 bg-neutral-900/40 overflow-hidden">
+              <button onClick={() => setDepthOpen(depthOpen === 'competitors' ? null : 'competitors')} className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-neutral-900/70 transition-colors">
+                <span className="flex items-center gap-3">
+                  <span className="text-lg">🏢</span>
+                  <span className="font-semibold text-white">Competitor Analysis</span>
+                </span>
+                {depthOpen === 'competitors' ? <ChevronUp className="h-4 w-4 text-neutral-500" /> : <ChevronDown className="h-4 w-4 text-neutral-500" />}
+              </button>
+              {depthOpen === 'competitors' && (
+                <div className="px-5 pb-5">
+                  <CompetitorAnalysis data={competitorData} />
+                </div>
+              )}
             </div>
           </FadeIn>
         ) : completedSections >= 2 && (
           <FadeIn delay={0.2}>
-            <div className="mb-8 text-center">
+            <div className="mb-3 rounded-xl border border-dashed border-neutral-800 bg-neutral-900/20 px-5 py-4 flex items-center justify-between gap-3">
+              <span className="flex items-center gap-3 text-sm text-neutral-400">
+                <span className="text-lg">🏢</span>
+                <span>Competitor Analysis</span>
+              </span>
               <Button
                 onClick={handleGenerateCompetitors}
                 disabled={generatingCompetitors}
+                size="sm"
                 variant="outline"
-                className="border-neutral-700"
+                className="border-neutral-700 text-xs"
               >
-                {generatingCompetitors ? '⏳ Analyzing Competitors...' : '🏢 Deep Dive Competitors'}
+                {generatingCompetitors ? '⏳ Analyzing...' : 'Generate'}
               </Button>
             </div>
           </FadeIn>

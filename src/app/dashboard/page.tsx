@@ -12,6 +12,7 @@ import { MarketTrends } from '@/components/market-trends';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { OnboardingTour } from '@/components/onboarding-tour';
 import { WeeklyDigest } from '@/components/weekly-digest';
+import { VibeCheckInline } from '@/components/vibe-check-inline';
 import { Lightbulb, Plus, LogOut, Clock, MapPin, ChevronRight, ArrowLeftRight, Trash2, X, CheckCircle2, Circle, Search, LayoutGrid, List } from 'lucide-react';
 
 interface Research {
@@ -210,6 +211,9 @@ export default function DashboardPage() {
             </div>
           </div>
         </FadeIn>
+
+        {/* Quick Vibe Check — instant idea feedback without leaving dashboard */}
+        <VibeCheckInline />
 
         {/* V27: Weekly Digest */}
         <WeeklyDigest ideas={ideas} />
