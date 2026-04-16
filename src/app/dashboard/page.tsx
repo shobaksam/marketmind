@@ -8,7 +8,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { IdeaCardSkeleton } from '@/components/ui/skeleton';
 import { FadeIn, FadeInStagger, FadeInItem } from '@/components/animate';
-import { Lightbulb, Plus, LogOut, Clock, MapPin, ChevronRight, ArrowLeftRight, Trash2, X, CheckCircle2, Circle } from 'lucide-react';
+import { MarketTrends } from '@/components/market-trends';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { OnboardingTour } from '@/components/onboarding-tour';
+import { WeeklyDigest } from '@/components/weekly-digest';
+import { Lightbulb, Plus, LogOut, Clock, MapPin, ChevronRight, ArrowLeftRight, Trash2, X, CheckCircle2, Circle, Search, LayoutGrid, List } from 'lucide-react';
 
 interface Research {
   score?: number;
@@ -81,6 +85,10 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'name' | 'score'>('date');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const fetchIdeas = useCallback(async () => {
     setError(null);
@@ -120,6 +128,32 @@ export default function DashboardPage() {
     }
   };
 
+  // V10: Filter and sort
+  // V26: Get unique categories
+  const categories = Array.from(new Set(ideas.map(i => i.category).filter(Boolean)));
+
+  const filteredIdeas = ideas
+    .filter(idea => {
+      if (categoryFilter !== 'all' && idea.category !== categoryFilter) return false;
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        (idea.title || '').toLowerCase().includes(q) ||
+        (idea.summary || '').toLowerCase().includes(q) ||
+        (idea.category || '').toLowerCase().includes(q) ||
+        (idea.location || '').toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name') return (a.title || '').localeCompare(b.title || '');
+      if (sortBy === 'score') {
+        const scoreA = a.research ? Math.max(...Object.values(a.research).map(r => r.score || 0), 0) : 0;
+        const scoreB = b.research ? Math.max(...Object.values(b.research).map(r => r.score || 0), 0) : 0;
+        return scoreB - scoreA;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-950">
@@ -132,6 +166,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white">
+      <OnboardingTour />
       {/* Nav */}
       <nav className="border-b border-neutral-800 px-4 sm:px-6 py-4 sticky top-0 bg-neutral-950/80 backdrop-blur z-50">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -139,8 +174,9 @@ export default function DashboardPage() {
             <Lightbulb className="h-6 w-6 text-amber-400" />
             <span className="text-xl font-bold">MarketMind</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="text-sm text-neutral-400 hidden sm:inline">{session.user?.name}</span>
+            <ThemeToggle />
             <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/' })} className="text-neutral-400 hover:text-white">
               <LogOut className="h-4 w-4" />
             </Button>
@@ -148,7 +184,7 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-24 sm:pb-12">
         {showOnboarding && (
           <OnboardingBanner onDismiss={() => { setShowOnboarding(false); localStorage.setItem('mm-onboarding-dismissed', '1'); }} />
         )}
@@ -157,7 +193,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Your Ideas</h1>
-              <p className="text-neutral-400 mt-1">{ideas.length} idea{ideas.length !== 1 ? 's' : ''} researched</p>
+              <p className="text-neutral-400 mt-1">{searchQuery && filteredIdeas.length !== ideas.length ? `${filteredIdeas.length} of ` : ''}{ideas.length} idea{ideas.length !== 1 ? 's' : ''} researched</p>
             </div>
             <div className="flex gap-2">
               {ideas.length >= 2 && (
@@ -174,6 +210,79 @@ export default function DashboardPage() {
             </div>
           </div>
         </FadeIn>
+
+        {/* V27: Weekly Digest */}
+        <WeeklyDigest ideas={ideas} />
+
+        {/* V16: Market Trends */}
+        <MarketTrends />
+
+        {/* V10: Search, Sort, View Toggle */}
+        {ideas.length > 0 && (
+          <FadeIn delay={0.05}>
+            <div className="flex flex-col sm:flex-row gap-3 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search ideas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-white placeholder:text-neutral-500 text-sm focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'score')}
+                  className="px-3 py-2 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-300 text-sm focus:outline-none focus:border-amber-500/50 cursor-pointer"
+                >
+                  <option value="date">📅 Newest</option>
+                  <option value="name">🔤 Name</option>
+                  <option value="score">⭐ Score</option>
+                </select>
+                <div className="flex rounded-lg border border-neutral-800 overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`px-3 py-2 transition-colors ${viewMode === 'list' ? 'bg-amber-500/10 text-amber-400' : 'text-neutral-500 hover:text-white'}`}
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`px-3 py-2 transition-colors ${viewMode === 'grid' ? 'bg-amber-500/10 text-amber-400' : 'text-neutral-500 hover:text-white'}`}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            {/* V26: Category filter */}
+            {categories.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setCategoryFilter('all')}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                    categoryFilter === 'all' ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-neutral-800 text-neutral-500 hover:text-white'
+                  }`}
+                >
+                  All
+                </button>
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat === categoryFilter ? 'all' : cat)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      categoryFilter === cat ? 'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-neutral-800 text-neutral-500 hover:text-white'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </FadeIn>
+        )}
 
         {error && (
           <FadeIn>
@@ -209,8 +318,8 @@ export default function DashboardPage() {
             </div>
           </FadeIn>
         ) : (
-          <FadeInStagger className="grid gap-4">
-            {ideas.map((idea) => {
+          <FadeInStagger className={viewMode === 'grid' ? 'grid sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'grid gap-4'}>
+            {filteredIdeas.map((idea) => {
               const totalSections = idea.framework?.sections?.length || 0;
               const completedSections = Object.keys(idea.research || {}).length;
               const progress = totalSections ? Math.round((completedSections / totalSections) * 100) : 0;

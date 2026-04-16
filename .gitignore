@@ -3,3 +3,6 @@ node_modules/
 .next/
 .vercel/
 .env.local
+
+screenshots/
+tsconfig.tsbuildinfo

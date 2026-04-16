@@ -10,6 +10,10 @@ import { IdeaDetailSkeleton } from '@/components/ui/skeleton';
 import { FadeIn, FadeInStagger, FadeInItem } from '@/components/animate';
 import jsPDF from 'jspdf';
 import { ResearchDashboard } from '@/components/research-dashboard';
+import { FinancialProjections } from '@/components/financial-projections';
+import { CompetitorAnalysis } from '@/components/competitor-analysis';
+import { ScoreBreakdown } from '@/components/score-breakdown';
+import { ChatAssistant } from '@/components/chat-assistant';
 
 const LOADING_MESSAGES = [
   '🔍 Analyzing market data...',
@@ -74,6 +78,7 @@ interface Section {
 
 interface Research {
   sectionId: string;
+  researchedAt?: string;
   content?: string;
   keyTakeaway?: string;
   keyInsights?: string[];
@@ -108,6 +113,8 @@ interface Idea {
   framework: { sections: Section[] };
   research: Record<string, Research>;
   swot: SWOT | null;
+  executive_summary: { executiveSummary: string; verdict: string; topStrengths: string[]; topRisks: string[]; nextSteps: string[] } | null;
+  notes: Record<string, string> | null;
 }
 
 export default function IdeaPage() {
@@ -125,6 +132,18 @@ export default function IdeaPage() {
   const [sectionError, setSectionError] = useState<string | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [journeyMode, setJourneyMode] = useState(true); // V8: auto-expand journey flow
+  const [executiveSummary, setExecutiveSummary] = useState<{ executiveSummary: string; verdict: string; topStrengths: string[]; topRisks: string[]; nextSteps: string[] } | null>(null);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [projections, setProjections] = useState<any>(null);
+  const [generatingProjections, setGeneratingProjections] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [competitorData, setCompetitorData] = useState<any>(null);
+  const [generatingCompetitors, setGeneratingCompetitors] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [actionPlan, setActionPlan] = useState<any>(null);
+  const [generatingPlan, setGeneratingPlan] = useState(false);
 
   const fetchIdea = useCallback(async () => {
     setError(null);
@@ -133,6 +152,11 @@ export default function IdeaPage() {
       if (!res.ok) throw new Error('Failed to load idea');
       const data = await res.json();
       setIdea(data);
+      if (data.executive_summary) setExecutiveSummary(data.executive_summary);
+      if (data.notes) setNotes(data.notes);
+      if (data.projections) setProjections(data.projections);
+      if (data.competitor_analysis) setCompetitorData(data.competitor_analysis);
+      if (data.action_plan) setActionPlan(data.action_plan);
     } catch {
       setError('Failed to load idea. Please try again.');
     } finally {
@@ -196,6 +220,49 @@ export default function IdeaPage() {
     }
   };
 
+  const handleGeneratePlan = async () => {
+    setGeneratingPlan(true);
+    try {
+      const res = await fetch(`/api/ideas/${params.id}/actionplan`, { method: 'POST' });
+      if (res.ok) setActionPlan(await res.json());
+    } catch { /* ignore */ } finally {
+      setGeneratingPlan(false);
+    }
+  };
+
+  const handleGenerateCompetitors = async () => {
+    setGeneratingCompetitors(true);
+    try {
+      const res = await fetch(`/api/ideas/${params.id}/competitors`, { method: 'POST' });
+      if (res.ok) setCompetitorData(await res.json());
+    } catch { /* ignore */ } finally {
+      setGeneratingCompetitors(false);
+    }
+  };
+
+  const handleGenerateProjections = async () => {
+    setGeneratingProjections(true);
+    try {
+      const res = await fetch(`/api/ideas/${params.id}/projections`, { method: 'POST' });
+      if (res.ok) setProjections(await res.json());
+    } catch { /* ignore */ } finally {
+      setGeneratingProjections(false);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    setGeneratingSummary(true);
+    try {
+      const res = await fetch(`/api/ideas/${params.id}/summary`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setExecutiveSummary(data);
+      }
+    } catch { /* ignore */ } finally {
+      setGeneratingSummary(false);
+    }
+  };
+
   const handleShare = async () => {
     try {
       const res = await fetch(`/api/ideas/${params.id}/share`, { method: 'POST' });
@@ -209,6 +276,58 @@ export default function IdeaPage() {
     } catch {
       console.error('Share failed');
     }
+  };
+
+  const handleExportMarkdown = () => {
+    if (!idea) return;
+    let md = `# ${idea.title}\n\n`;
+    md += `**Category:** ${idea.category} | **Location:** ${idea.location || 'N/A'}\n\n`;
+    md += `## Summary\n${idea.summary}\n\n`;
+    
+    if (executiveSummary) {
+      md += `## Executive Summary\n${executiveSummary.executiveSummary}\n\n`;
+      md += `**Verdict:** ${executiveSummary.verdict}\n\n`;
+    }
+
+    for (const section of idea.framework.sections) {
+      const research = idea.research?.[section.id];
+      md += `## ${section.icon} ${section.title}\n`;
+      if (research) {
+        if (research.keyTakeaway) md += `> ${research.keyTakeaway}\n\n`;
+        if (research.score) md += `**Score:** ${research.score}/10\n\n`;
+        if (research.stats?.length) {
+          research.stats.forEach((s: { icon: string; label: string; value: string }) => {
+            md += `- ${s.icon} **${s.label}:** ${s.value}\n`;
+          });
+          md += '\n';
+        }
+        if (research.keyInsights?.length) {
+          research.keyInsights.forEach(i => { md += `- ${i}\n`; });
+          md += '\n';
+        }
+      } else {
+        md += '*Not yet researched*\n\n';
+      }
+    }
+
+    if (idea.swot) {
+      md += `## SWOT Analysis\n`;
+      md += `**Score:** ${idea.swot.overallScore}/10\n\n`;
+      md += `### Strengths\n${idea.swot.strengths.map(s => `- ${s}`).join('\n')}\n\n`;
+      md += `### Weaknesses\n${idea.swot.weaknesses.map(w => `- ${w}`).join('\n')}\n\n`;
+      md += `### Opportunities\n${idea.swot.opportunities.map(o => `- ${o}`).join('\n')}\n\n`;
+      md += `### Threats\n${idea.swot.threats.map(t => `- ${t}`).join('\n')}\n\n`;
+    }
+
+    md += `\n---\n*Generated by MarketMind — ${new Date().toLocaleDateString()}*\n`;
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${idea.title || 'research'}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleExportPDF = () => {
@@ -376,9 +495,14 @@ export default function IdeaPage() {
                 {copied ? '✓ Link Copied!' : '🔗 Share'}
               </Button>
               {completedSections > 0 && (
-                <Button onClick={handleExportPDF} variant="outline" size="lg" className="border-neutral-700 text-base px-5">
-                  📄 Download PDF
-                </Button>
+                <>
+                  <Button onClick={handleExportPDF} variant="outline" size="lg" className="border-neutral-700 text-base px-5">
+                    📄 PDF
+                  </Button>
+                  <Button onClick={handleExportMarkdown} variant="outline" size="lg" className="border-neutral-700 text-base px-5">
+                    📝 Markdown
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -444,6 +568,76 @@ export default function IdeaPage() {
             </CardContent>
           </Card>
         </FadeIn>
+
+        {/* V13: Executive Summary */}
+        {executiveSummary ? (
+          <FadeIn delay={0.05}>
+            <Card className="border-neutral-800 bg-gradient-to-br from-neutral-900/80 to-amber-950/10 mb-8">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold flex items-center gap-2">📋 Executive Summary</h2>
+                  <Badge className={`text-sm px-3 py-1 ${
+                    executiveSummary.verdict === 'GO' ? 'bg-green-500/20 text-green-400' :
+                    executiveSummary.verdict === 'CAUTION' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {executiveSummary.verdict === 'GO' ? '🟢' : executiveSummary.verdict === 'CAUTION' ? '🟡' : '🔴'} {executiveSummary.verdict}
+                  </Badge>
+                </div>
+                <p className="text-sm text-neutral-300 leading-relaxed mb-4 whitespace-pre-line">{executiveSummary.executiveSummary}</p>
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-green-400 mb-2">💪 Top Strengths</h4>
+                    {executiveSummary.topStrengths?.map((s, i) => (
+                      <p key={i} className="text-xs text-neutral-300 mb-1">• {s}</p>
+                    ))}
+                  </div>
+                  <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-red-400 mb-2">⚠️ Top Risks</h4>
+                    {executiveSummary.topRisks?.map((r, i) => (
+                      <p key={i} className="text-xs text-neutral-300 mb-1">• {r}</p>
+                    ))}
+                  </div>
+                  <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+                    <h4 className="text-xs font-semibold text-blue-400 mb-2">🚀 Next Steps</h4>
+                    {executiveSummary.nextSteps?.map((s, i) => (
+                      <p key={i} className="text-xs text-neutral-300 mb-1">{i + 1}. {s}</p>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </FadeIn>
+        ) : completedSections >= 3 && (
+          <FadeIn delay={0.05}>
+            <div className="mb-8 text-center">
+              <Button
+                onClick={handleGenerateSummary}
+                disabled={generatingSummary}
+                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-semibold"
+              >
+                {generatingSummary ? '⏳ Generating Executive Summary...' : '📋 Generate Executive Summary'}
+              </Button>
+            </div>
+          </FadeIn>
+        )}
+
+        {/* V23: Score Breakdown */}
+        {completedSections >= 3 && (() => {
+          const sections = idea.framework.sections
+            ?.filter(s => idea.research?.[s.id]?.score)
+            .map(s => ({ title: s.title, icon: s.icon, score: idea.research[s.id].score || 0 })) || [];
+          if (sections.length < 2) return null;
+          const avgScore = sections.reduce((sum, s) => sum + s.score, 0) / sections.length;
+          return (
+            <FadeIn delay={0.08}>
+              <div className="mb-8">
+                <h2 className="text-xl font-bold mb-4">⭐ Idea Scoring</h2>
+                <ScoreBreakdown data={{ sections, avgScore }} />
+              </div>
+            </FadeIn>
+          );
+        })()}
 
         {/* SWOT Analysis - 2x2 Grid */}
         {idea.swot && (
@@ -535,6 +729,117 @@ export default function IdeaPage() {
               🔄 Retry
             </Button>
           </div>
+        )}
+
+        {/* V17: Financial Projections */}
+        {projections ? (
+          <FadeIn delay={0.15}>
+            <div className="mb-8">
+              <h2 className="text-xl font-bold mb-4">💰 Financial Projections</h2>
+              <FinancialProjections data={projections} />
+            </div>
+          </FadeIn>
+        ) : completedSections >= 2 && (
+          <FadeIn delay={0.15}>
+            <div className="mb-8 text-center">
+              <Button
+                onClick={handleGenerateProjections}
+                disabled={generatingProjections}
+                variant="outline"
+                className="border-neutral-700"
+              >
+                {generatingProjections ? '⏳ Generating Projections...' : '💰 Generate Financial Projections'}
+              </Button>
+            </div>
+          </FadeIn>
+        )}
+
+        {/* V19: Action Plan */}
+        {actionPlan ? (
+          <FadeIn delay={0.2}>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold">🎯 Action Plan</h2>
+                {actionPlan.totalTimeline && (
+                  <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20">
+                    Timeline: {actionPlan.totalTimeline}
+                  </Badge>
+                )}
+              </div>
+              <div className="space-y-4">
+                {actionPlan.phases?.map((phase: { name: string; duration: string; icon: string; steps: { task: string; duration: string; priority: string; cost: string }[] }, pi: number) => (
+                  <Card key={pi} className="border-neutral-800 bg-neutral-900/50">
+                    <CardContent className="pt-5">
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="text-2xl">{phase.icon}</span>
+                        <div>
+                          <h3 className="font-semibold text-white">{phase.name}</h3>
+                          <p className="text-xs text-neutral-500">{phase.duration}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {phase.steps?.map((step: { task: string; duration: string; priority: string; cost: string }, si: number) => (
+                          <div key={si} className="flex items-start gap-3 p-3 rounded-lg bg-neutral-800/30 border border-neutral-700/30">
+                            <span className={`mt-0.5 text-sm ${step.priority === 'high' ? 'text-red-400' : step.priority === 'medium' ? 'text-amber-400' : 'text-neutral-500'}`}>
+                              {step.priority === 'high' ? '🔴' : step.priority === 'medium' ? '🟡' : '⚪'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-neutral-200">{step.task}</p>
+                              <div className="flex gap-3 mt-1 text-xs text-neutral-500">
+                                <span>⏱️ {step.duration}</span>
+                                {step.cost && <span>💰 {step.cost}</span>}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {actionPlan.criticalPath?.length > 0 && (
+                <div className="mt-4 p-4 rounded-xl border border-red-500/20 bg-red-500/5">
+                  <h4 className="text-sm font-semibold text-red-400 mb-2">⚡ Critical Path</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {actionPlan.criticalPath.map((t: string, i: number) => (
+                      <span key={i} className="text-xs bg-red-500/10 text-red-300 px-2 py-1 rounded">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </FadeIn>
+        ) : completedSections >= 2 && (
+          <FadeIn delay={0.2}>
+            <div className="mb-8 text-center">
+              <Button onClick={handleGeneratePlan} disabled={generatingPlan} variant="outline" className="border-neutral-700">
+                {generatingPlan ? '⏳ Generating Action Plan...' : '🎯 Generate Action Plan'}
+              </Button>
+            </div>
+          </FadeIn>
+        )}
+
+        {/* V18: Competitor Deep Dive */}
+        {competitorData ? (
+          <FadeIn delay={0.2}>
+            <div className="mb-8">
+              <h2 className="text-xl font-bold mb-4">🏢 Competitor Analysis</h2>
+              <CompetitorAnalysis data={competitorData} />
+            </div>
+          </FadeIn>
+        ) : completedSections >= 2 && (
+          <FadeIn delay={0.2}>
+            <div className="mb-8 text-center">
+              <Button
+                onClick={handleGenerateCompetitors}
+                disabled={generatingCompetitors}
+                variant="outline"
+                className="border-neutral-700"
+              >
+                {generatingCompetitors ? '⏳ Analyzing Competitors...' : '🏢 Deep Dive Competitors'}
+              </Button>
+            </div>
+          </FadeIn>
         )}
 
         {/* V8: Journey flow toggle */}
@@ -647,7 +952,53 @@ export default function IdeaPage() {
 
                     {research && isExpanded && (
                       <FadeIn>
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs text-neutral-500">
+                            {research.researchedAt ? `Researched ${new Date(research.researchedAt).toLocaleDateString()}` : 'Researched'}
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const text = `${section.title}\n${research.keyTakeaway || ''}\nScore: ${research.score || 'N/A'}/10`;
+                                navigator.clipboard.writeText(text);
+                              }}
+                              size="sm"
+                              variant="outline"
+                              className="border-neutral-700 text-xs"
+                            >
+                              📋 Copy
+                            </Button>
+                            <Button
+                              onClick={(e) => { e.stopPropagation(); handleResearch(section.id); }}
+                              size="sm"
+                              variant="outline"
+                              className="border-neutral-700 text-xs"
+                              disabled={researchingSection !== null}
+                            >
+                              🔄 Re-research
+                            </Button>
+                          </div>
+                        </div>
                         <ResearchDashboard research={research} />
+                        {/* V15: Notes */}
+                        <div className="mt-4 pt-4 border-t border-neutral-800">
+                          <label className="text-xs font-semibold text-neutral-500 mb-2 block">📝 Your Notes</label>
+                          <textarea
+                            value={notes[section.id] || ''}
+                            onChange={(e) => setNotes(prev => ({ ...prev, [section.id]: e.target.value }))}
+                            onBlur={() => {
+                              fetch(`/api/ideas/${params.id}/notes`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ sectionId: section.id, note: notes[section.id] || '' }),
+                              });
+                            }}
+                            placeholder="Add your thoughts, insights, or action items..."
+                            className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-lg p-3 text-sm text-neutral-300 placeholder:text-neutral-600 focus:outline-none focus:border-amber-500/30 min-h-[80px] resize-y"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
                         {/* V8 Journey: next section CTA */}
                         {journeyMode && idx < (idea.framework.sections?.length || 0) - 1 && !idea.research?.[idea.framework.sections[idx + 1]?.id] && (
                           <div className="mt-6 pt-4 border-t border-neutral-800 flex justify-center">
@@ -686,6 +1037,8 @@ export default function IdeaPage() {
           })}
         </FadeInStagger>
       </main>
+      {/* V25: AI Chat Assistant */}
+      {completedSections > 0 && <ChatAssistant ideaId={idea.id} />}
     </div>
   );
 }

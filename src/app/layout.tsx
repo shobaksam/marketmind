@@ -2,10 +2,18 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
+import { MobileNav } from '@/components/mobile-nav';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  manifest: '/manifest.json',
+  themeColor: '#6366f1',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'MarketMind',
+  },
   title: 'MarketMind — AI-Powered Business Idea Research',
   description: 'Turn any business idea into actionable market research in minutes. Get AI-generated research frameworks, cost breakdowns, SWOT analysis, and competitive intelligence.',
   keywords: ['business research', 'market analysis', 'AI research', 'business idea validation', 'SWOT analysis', 'startup research'],
@@ -35,8 +43,17 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="dns-prefetch" href="https://api.groq.com" />
+        <link rel="dns-prefetch" href="https://generativelanguage.googleapis.com" />
+        <meta name="color-scheme" content="dark" />
+      </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <MobileNav />
+        </Providers>
       </body>
     </html>
   );
