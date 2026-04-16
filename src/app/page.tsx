@@ -104,6 +104,9 @@ export default function LandingPage() {
       setVibeResult(data);
       setOpenSection(data.verdict === 'bad' ? 'alts' : null);
       setTimeout(() => setShowResult(true), 50);
+      try {
+        localStorage.setItem('mm:pending_vibe', JSON.stringify({ idea: target, result: data, ts: Date.now() }));
+      } catch {}
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something broke');
     } finally {
@@ -392,7 +395,7 @@ export default function LandingPage() {
               <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/5 to-orange-500/5 p-6 text-center">
                 <p className="text-sm text-neutral-300 mb-3">Want the full market research? Competitors, costs, action plan & more.</p>
                 <Button
-                  onClick={() => signIn('google')}
+                  onClick={() => signIn('google', { callbackUrl: '/ideas/new?pending=1' })}
                   className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8"
                 >
                   Sign in for full research <ArrowRight className="ml-2 h-4 w-4" />

@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { FadeIn } from '@/components/animate';
 import { ArrowLeft, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
@@ -53,8 +53,17 @@ const VERDICT_STYLES: Record<VibeResult['verdict'], { label: string; sublabel: s
 };
 
 export default function NewIdeaPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-neutral-950"><div className="animate-spin h-8 w-8 border-2 border-amber-500/30 border-t-amber-500 rounded-full" /></div>}>
+      <NewIdeaPageInner />
+    </Suspense>
+  );
+}
+
+function NewIdeaPageInner() {
   const { status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [idea, setIdea] = useState('');
   const [loading, setLoading] = useState(false);
   const [vibeResult, setVibeResult] = useState<VibeResult | null>(null);
@@ -69,6 +78,23 @@ export default function NewIdeaPage() {
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login');
   }, [status, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (searchParams.get('pending') !== '1') return;
+    try {
+      const raw = localStorage.getItem('mm:pending_vibe');
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { idea: string; result: VibeResult; ts: number };
+      localStorage.removeItem('mm:pending_vibe');
+      if (!parsed?.idea || !parsed?.result) return;
+      if (Date.now() - (parsed.ts || 0) > 24 * 60 * 60 * 1000) return;
+      setIdea(parsed.idea);
+      setVibeResult(parsed.result);
+      setOpenSection(parsed.result.verdict === 'bad' ? 'alts' : null);
+      setTimeout(() => setShowResult(true), 50);
+    } catch {}
+  }, [status, searchParams]);
 
   const startQuips = useCallback(() => {
     setQuip(LOADING_QUIPS[Math.floor(Math.random() * LOADING_QUIPS.length)]);
